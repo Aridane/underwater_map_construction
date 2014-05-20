@@ -6,10 +6,11 @@ ScanProcessor::ScanProcessor(ros::NodeHandle* n){
 	nh.param("mode", mode_, string("SONAR+CONT")); //LASER, SONAR, LASER+SONAR, +CONT
 	nh.param("maxBinValue", maxBinValue_, int(255));
 	nh.param("scanSize", scanSize_, int(120));
-	nh.param("thresholdType", thresholdMode_, string("FIXED"));
+	nh.param("thresholdType", thresholdMode_, string("OTSU"));
 	nh.param("upsampling", upsamplingMode_, string("MLS+VOXEL_GRID_DILATION"));
 	nh.param("outlierRemovalMode", outlierRemovalMode_, string("STATISTICAL"));
 	nh.param("thresholdValue", thresholdValue_, int(128));
+	nh.param("thresholdProportion", thresholdProportion_, double(0.75));
 	nh.param("sonarSubscribeTopic", sonarSubscribeTopic_, string("/sonar"));
 	nh.param("sonarCloudPublishTopic", sonarCloudPublishTopic_, string("/Sonar/Scan/SonarCloud"));
 	nh.param("laserCloudPublishTopic", laserCloudPublishTopic_, string("/Sonar/Scan/laserCloud"));
@@ -27,6 +28,8 @@ void ScanProcessor::laserInit(ros::NodeHandle* n){
 
 void ScanProcessor::sonarInit(ros::NodeHandle* n){
 	sonarCloudPublisher_ = n->advertise<sensor_msgs::PointCloud2>(sonarCloudPublishTopic_.c_str(), 1);
+	sonarDebugCloudPublisher_ = n->advertise<sensor_msgs::PointCloud2>("/DebugCloud", 1);
+
 	sonarCloud_ = boost::make_shared<intensityCloud>();
 	sonarCloudMsg_ = boost::make_shared<avora_msgs::SonarScanCloud>();
 	sonarCloudSize_ = 0;
@@ -39,7 +42,8 @@ ScanProcessor::~ScanProcessor(){
 }
 
 bool ScanProcessor::hasChanged(avora_msgs::SonarScanLineConstPtr scan, avora_msgs::SonarScanLineConstPtr oldScanLine){
-	return (scan->sensorAngle != oldScanLine->sensorAngle);
+	//return (scan->sensorAngle != oldScanLine->sensorAngle);
+	return false;
 }
 
 void ScanProcessor::beamCallback(avora_msgs::SonarScanLineConstPtr scanLine){
@@ -59,8 +63,8 @@ void ScanProcessor::beamCallback(avora_msgs::SonarScanLineConstPtr scanLine){
 				maxIndex = i;
 			}
 		}
-		point.x = maxIndex * scanLine->range_resolution * cos(scanLine->angle*M_PI/180.0);
-		point.y = maxIndex * scanLine->range_resolution * sin(scanLine->angle*M_PI/180.0);
+		point.x = maxIndex * scanLine->range_resolution * cos(scanLine->angle);
+		point.y = maxIndex * scanLine->range_resolution * sin(scanLine->angle);
 		point.z = 0;
 		point.intensity = scanLine->intensities[maxIndex];
 
@@ -84,13 +88,18 @@ void ScanProcessor::beamCallback(avora_msgs::SonarScanLineConstPtr scanLine){
 				sonarCloudNBeams_ = 0;
 			}
 		}
+		double RR = scanLine->range_resolution;
+		if (RR == 0) RR = 30.0 / 500.0;
+
+		scanAngles.push_back(scanLine->angle);
 
 		for (int i=0;i<scanLine->intensities.size();i++){
 			//TODO Put correct values
-			point.x = (i+1) * scanLine->range_resolution * cos(scanLine->angle*M_PI/180.0);
-			point.y = (i+1) * scanLine->range_resolution * sin(scanLine->angle*M_PI/180.0);
+			point.x = (i+1) * RR;// * cos(scanLine->angle);
+			point.y = (i+1) * RR;// * sin(scanLine->angle);
 			point.z = 0;
 			point.intensity = scanLine->intensities[i];
+
 			sonarCloud_->push_back(point);
 			sonarCloudSize_++;
 		}
@@ -116,13 +125,43 @@ void ScanProcessor::intensityToRGB(intensityCloud::Ptr cloudIn, rgbCloud::Ptr rg
 }
 
 void ScanProcessor::thresholdCloud(intensityCloud::Ptr cloud){
-	if (thresholdMode_ == "OTSU"){
+	double maxFixed = 0.0;
+	//Histogram
+	std::vector<double> histogram(256,0);
+	// Filter for thresholding
+	pcl::PassThrough<pcl::PointXYZI> passthroughFilter;
+
+
+	for (cloudIterator_ = cloud->begin();cloudIterator_ != cloud->end();cloudIterator_++){
+		histogram[cloudIterator_->intensity]++;
+		if (cloudIterator_->intensity > maxFixed) maxFixed = cloudIterator_->intensity;
+	}
+	if (thresholdMode_.find("Fixed") != -1){
+		// Set input cloud
+		passthroughFilter.setInputCloud(cloud);
+		// Field we want to filter (intensity)
+		passthroughFilter.setFilterFieldName("intensity");
+		// Set range of intensity values accepted
+		passthroughFilter.setFilterLimits(thresholdValue_, maxBinValue_+1);
+		// Keep organised setting removed points to NaN
+		passthroughFilter.setKeepOrganized(true);
+		// Apply filter
+		passthroughFilter.filter(*cloud);
+	}
+	if (thresholdMode_.find("PROPORTIONAL") != -1){
+		// Set input cloud
+		passthroughFilter.setInputCloud(cloud);
+		// Field we want to filter (intensity)
+		passthroughFilter.setFilterFieldName("intensity");
+		// Set range of intensity values accepted
+		passthroughFilter.setFilterLimits(maxFixed*thresholdProportion_, maxBinValue_+1);
+		// Keep organised setting removed points to NaN
+		passthroughFilter.setKeepOrganized(true);
+		// Apply filter
+		passthroughFilter.filter(*cloud);
+	}
+	if (thresholdMode_.find("OTSU") != -1){
 		//OTSU Method
-		//Histogram
-		std::vector<double> histogram(256,0);
-		for (cloudIterator_ = cloud->begin();cloudIterator_ != cloud->end();cloudIterator_++){
-			histogram[cloudIterator_->intensity]++;
-		}
 		double sum = 0;
 		for (int i=0 ; i<256 ; i++) sum += i * histogram[i];
 
@@ -154,27 +193,30 @@ void ScanProcessor::thresholdCloud(intensityCloud::Ptr cloud){
 			}
 
 		}
-		thresholdValue_ = (threshold1 + threshold2) / 2.0;
+		double thresholdValueOTSU = (threshold1 + threshold2) / 2.0;
+		ROS_INFO("OTSU THRESHOLD IS %f", thresholdValueOTSU);
+
+		// Set input cloud
+		passthroughFilter.setInputCloud(cloud);
+		// Field we want to filter (intensity)
+		passthroughFilter.setFilterFieldName("intensity");
+		// Set range of intensity values accepted
+		passthroughFilter.setFilterLimits(thresholdValueOTSU, maxBinValue_+1);
+		// Keep organised setting removed points to NaN
+		passthroughFilter.setKeepOrganized(true);
+		// Apply filter
+		passthroughFilter.filter(*cloud);
+
 	}
 
-	// Filter for thresholding
-	pcl::PassThrough<pcl::PointXYZI> passthroughFilter;
-	// Set input cloud
-	passthroughFilter.setInputCloud(cloud);
-	// Field we want to filter (intensity)
-	passthroughFilter.setFilterFieldName("intensity");
-	// Set range of intensity values accepted
-	passthroughFilter.setFilterLimits(thresholdValue_, maxBinValue_);
-	// Keep organised setting removed points to NaN
-	passthroughFilter.setKeepOrganized(true);
-	// Apply filter
-	passthroughFilter.filter(*cloud);
 
 
 }
 
 void ScanProcessor::removeCloudOutliers(intensityCloud::Ptr cloud){
-	if (outlierRemovalMode_ == "STATISTICAL"){
+	ROS_INFO("OUTLIER %s", outlierRemovalMode_.c_str());
+	if (outlierRemovalMode_.find("STATISTICAL") != -1){
+		ROS_INFO("STATISTICAL");
 		// Create the filtering object
 		 pcl::StatisticalOutlierRemoval<pcl::PointXYZI> sor;
 		 sor.setInputCloud (cloud);
@@ -185,24 +227,26 @@ void ScanProcessor::removeCloudOutliers(intensityCloud::Ptr cloud){
 		 	 Points will be classified as inlier or outlier if their average neighbor
 		 	 distance is below or above this threshold respectively.
 		 */
-		 sor.setStddevMulThresh (1.0);
+		 sor.setStddevMulThresh (0.5);
 		 sor.setKeepOrganized(true);
 		 sor.filter (*cloud);
-	}
-	else {
-/*		// Create the radius outlier removal filter
+	}else {
+		ROS_INFO("RADIUS");
+		// Create the radius outlier removal filter
 		pcl::RadiusOutlierRemoval<pcl::PointXYZI> radius_outlier_removal;
 		// Set input cloud
 		radius_outlier_removal.setInputCloud (cloud);
 		// Set radius for neighbor search
-		radius_outlier_removal.setRadiusSearch (0.05);
+		radius_outlier_removal.setRadiusSearch (oldScanLine_->range_resolution);
 		// Set threshold for minimum required neighbors neighbors
-		radius_outlier_removal.setMinNeighborsInRadius (800);
+		radius_outlier_removal.setMinNeighborsInRadius (20);
+
+
 
 		radius_outlier_removal.setKeepOrganized(true);
 		// Do filtering
 		radius_outlier_removal.filter (*cloud);
-*/
+
 	}
 
 }
@@ -266,10 +310,6 @@ intensityCloud ScanProcessor::upSampleCloud(intensityCloud::Ptr cloud, int newDi
 	}
 
 
-
-
-
-
 	/*
 	if (upsamplingMode_.find("MLS") != -1){
 
@@ -311,6 +351,26 @@ intensityCloud ScanProcessor::upSampleCloud(intensityCloud::Ptr cloud, int newDi
 	}*/
 	return result;
 }
+
+intensityCloud ScanProcessor::polar2Cartesian(intensityCloud::Ptr cloudIn){
+	intensityCloud cloudOut;
+	int i = 0;
+	double angle;
+	pcl::PointXYZI p;
+	for (cloudIterator_ = cloudIn->begin();cloudIterator_ != cloudIn->end();cloudIterator_++){
+
+		angle = scanAngles[i/500];
+		p.x = cloudIterator_->x * cos(angle);
+		p.y = cloudIterator_->y * sin(angle);
+		p.z = cloudIterator_->z;
+		p.intensity = cloudIterator_->intensity;
+		cloudOut.push_back(p);
+		i++;
+	}
+	scanAngles.clear();
+	return cloudOut;
+}
+
 // This procedure refines the data from the scan in the following way
 // 1 - Threshold values with low intensity -> produces NaN
 // 2 - Outlier Removal -> produces NaN
@@ -326,8 +386,7 @@ void ScanProcessor::processSonarCloud(){
 	thresholdCloud(tempSonarCloud);
 	removeCloudOutliers(tempSonarCloud);
 	//sonarCloud_.reset(&upSampleCloud(tempSonarCloud,  ,sonarCloud_));
-
-	pcl::toROSMsg(*(tempSonarCloud.get()), sonarCloudMsg_->scan);
+	pcl::toROSMsg(polar2Cartesian(tempSonarCloud), sonarCloudMsg_->scan);
 }
 
 void ScanProcessor::publishSonarCloud(){
@@ -350,7 +409,7 @@ void ScanProcessor::publishLaserCloud(){
 
 int main (int argc, char** argv){
 	ros::init(argc, argv, "ScanProcessor");
-
+	ROS_INFO("SCAN PROCESSOR STARTS");
 	ros::NodeHandle nh;
 
 	ScanProcessor sonar2scan(&nh);

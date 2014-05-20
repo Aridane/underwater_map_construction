@@ -12,6 +12,7 @@
 #include <pcl/PCLPointCloud2.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/statistical_outlier_removal.h>
+#include <pcl/filters/radius_outlier_removal.h>
 #include <pcl/surface/mls.h>
 #include <pcl/surface/bilateral_upsampling.h>
 #include <pcl/surface/poisson.h>
@@ -33,15 +34,17 @@ using namespace std;
 class ScanProcessor {
 private:
 	string mode_; // LASER, SONAR, LASER+SONAR
-	string thresholdMode_; //FIXED OTSU
+	string thresholdMode_; //FIXED OTSU PROPOTIONAL
 	string upsamplingMode_; //BILATERAL, MLS (+DISTINCT_CLOUD | +SAMPLE_LOCAL_PLANE), Poisson
 							//				 (+RANDOM_UNIFORM_DENSITY | +VOXEL_GRID_DILATION )
 	string outlierRemovalMode_;// STATISTICAL, RADIUS
 	int thresholdValue_;
+	double thresholdProportion_;
 	int maxBinValue_;
 	int sonarCloudSize_;
 	int sonarCloudNBeams_;
 	int scanSize_;
+	vector<double> scanAngles;
 
 	avora_msgs::SonarScanCloudPtr laserCloudMsg_;
 	avora_msgs::SonarScanCloudPtr sonarCloudMsg_;
@@ -52,6 +55,8 @@ private:
 	ros::Subscriber beamSubscriber_;
 	ros::Publisher laserCloudPublisher_;
 	ros::Publisher sonarCloudPublisher_;
+	ros::Publisher sonarDebugCloudPublisher_;
+
 	string beamSubscribeTopic_;
 	string sonarSubscribeTopic_;
 	
@@ -70,6 +75,7 @@ public:
 	void thresholdCloud(intensityCloud::Ptr cloud);
 	void removeCloudOutliers(intensityCloud::Ptr cloud);
 	intensityCloud upSampleCloud(intensityCloud::Ptr cloud, int newDimX, int newDimY, intensityCloud::Ptr originalCloud = intensityCloud::Ptr());
+	intensityCloud polar2Cartesian(intensityCloud::Ptr cloud);
 	void processLaserCloud();
 	void publishLaserCloud();
 	void processSonarCloud();

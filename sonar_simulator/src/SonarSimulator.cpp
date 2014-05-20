@@ -68,7 +68,10 @@ void SonarSimulator::publishNextLine(){
 
 
 	//Publish ScanLine
+	double oldDegrees = scanLine_.angle;
+	scanLine_.angle = scanLine_.angle * M_PI /180.0;
 	sonarLinePublisher_.publish(scanLine_);
+	scanLine_.angle = oldDegrees;
 	//Update Next Parameters
 	scanLine_.intensities.clear();
 	scanLine_.angle = scanLine_.angle + step_;
