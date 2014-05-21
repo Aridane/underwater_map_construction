@@ -40,10 +40,12 @@ private:
 	string outlierRemovalMode_;// STATISTICAL, RADIUS
 	int thresholdValue_;
 	double thresholdProportion_;
+	double OTSUMultiplier_;
 	int maxBinValue_;
 	int sonarCloudSize_;
 	int sonarCloudNBeams_;
 	int scanSize_;
+
 	vector<double> scanAngles;
 
 	avora_msgs::SonarScanCloudPtr laserCloudMsg_;
