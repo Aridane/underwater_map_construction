@@ -114,11 +114,13 @@ include_directories(${PCL_INCLUDE_DIRS})
 ## Declare a cpp executable
 # add_executable(sonar_processing_node src/sonar_processing_node.cpp)
 add_executable(ScanProcessor src/ScanProcessor.cpp)
+add_executable(Wall2DDetector src/Wall2DDetector.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
 # add_dependencies(sonar_processing_node sonar_processing_generate_messages_cpp)
 add_dependencies(ScanProcessor avora_msgs_generate_messages_cpp)
+
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(sonar_processing_node
 #   ${catkin_LIBRARIES}
@@ -126,6 +128,9 @@ add_dependencies(ScanProcessor avora_msgs_generate_messages_cpp)
 target_link_libraries(ScanProcessor ${catkin_LIBRARIES})
 target_link_libraries(ScanProcessor ${OpenCV_LIBRARIES})
 target_link_libraries(ScanProcessor ${PCL_LIBRARIES})
+
+target_link_libraries(Wall2DDetector ${catkin_LIBRARIES})
+target_link_libraries(Wall2DDetector ${PCL_LIBRARIES})
 
 #############
 ## Install ##

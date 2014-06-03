@@ -34,10 +34,10 @@ using namespace std;
 class ScanProcessor {
 private:
 	string mode_; // LASER, SONAR, LASER+SONAR
-	string thresholdMode_; //FIXED OTSU PROPOTIONAL
-	string upsamplingMode_; //BILATERAL, MLS (+DISTINCT_CLOUD | +SAMPLE_LOCAL_PLANE), Poisson
+	string thresholdMode_; //NONE, FIXED OTSU PROPOTIONAL
+	string upsamplingMode_; //NONE, BILATERAL, MLS (+DISTINCT_CLOUD | +SAMPLE_LOCAL_PLANE), Poisson
 							//				 (+RANDOM_UNIFORM_DENSITY | +VOXEL_GRID_DILATION )
-	string outlierRemovalMode_;// STATISTICAL, RADIUS
+	string outlierRemovalMode_;// NONE, STATISTICAL, RADIUS
 	int thresholdValue_;
 	double thresholdProportion_;
 	double OTSUMultiplier_;

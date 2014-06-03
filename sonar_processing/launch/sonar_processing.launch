@@ -4,18 +4,19 @@
 
   <!-- (LASER | SONAR)[CONT] -->
   <arg name="mode" default="SONAR"/>
-  <arg name="maxBinValue" default="255"/>
+  <arg name="maxBinValue" default="127"/>
   <!-- TODO Find a better way -->
   <arg name="scanSize" default="180"/>
   <!-- OTSU, FIXED, PROPORTIONAL -->
-  <arg name="thresholdType" default="OTSU+PROPORTIONAL"/>
+  <arg name="thresholdType" default="OTSU+FIXED"/>
   <!-- (STATISTICAL | RADIUS) -->
-  <arg name="outlierRemovalMode" default="STATISTICAL"/>
+  <arg name="outlierRemovalMode" default="NONE"/>
   <!-- For fixed thresholding -->
   <arg name="thresholdValue" default="100"/>
   <!-- For proportional thresholding -->
   <arg name="thresholdProportion" default="0.7"/>
   
+  <arg name="OTSUMultiplier" default="1.6"/>
   <arg name="sonarSubscribeTopic" default="/sonar"/>
   <arg name="sonarCloudPublishTopic" default="/Sonar/Scan/SonarCloud"/>
   <arg name="laserCloudPublishTopic" default="/Sonar/Scan/laserCloud"/>

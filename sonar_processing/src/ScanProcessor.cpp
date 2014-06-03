@@ -4,7 +4,7 @@ using namespace std;
 ScanProcessor::ScanProcessor(ros::NodeHandle* n){
 	ros::NodeHandle nh("~");
 	nh.param("mode", mode_, string("SONAR")); //LASER, SONAR, LASER+SONAR, +CONT
-	nh.param("maxBinValue", maxBinValue_, int(255));
+	nh.param("maxBinValue", maxBinValue_, int(127));
 	nh.param("scanSize", scanSize_, int(120));
 	nh.param("thresholdType", thresholdMode_, string("OTSU+PROPORTIONAL+FIXED"));
 	nh.param("upsampling", upsamplingMode_, string("MLS+VOXEL_GRID_DILATION"));
@@ -126,9 +126,9 @@ void ScanProcessor::intensityToRGB(intensityCloud::Ptr cloudIn, rgbCloud::Ptr rg
 }
 
 void ScanProcessor::thresholdCloud(intensityCloud::Ptr cloud){
-	double maxFixed = 0.0, minFixed = 255;
+	double maxFixed = 0.0, minFixed = maxBinValue_;
 	//Histogram
-	std::vector<double> histogram(256,0);
+	std::vector<double> histogram(maxBinValue_ + 1,0);
 	// Filter for thresholding
 	pcl::PassThrough<pcl::PointXYZI> passthroughFilter;
 
@@ -142,7 +142,7 @@ void ScanProcessor::thresholdCloud(intensityCloud::Ptr cloud){
 	if (thresholdMode_.find("OTSU") != -1){
 		//OTSU Method
 		double sum = 0;
-		for (int i=0 ; i<256 ; i++) sum += i * histogram[i];
+		for (int i=0 ; i<maxBinValue_+1; i++) sum += i * histogram[i];
 
 		double size = cloud->size();
 		double sumB = 0;
@@ -155,7 +155,7 @@ void ScanProcessor::thresholdCloud(intensityCloud::Ptr cloud){
 		double threshold1 = 0.0;
 		double threshold2 = 0.0;
 
-		for (int i = 0;i<256;i++){
+		for (int i = 0;i<maxBinValue_+1;i++){
 			wB += histogram[i];
 			if (wB == 0) continue;
 			wF = size - wB;
@@ -225,8 +225,6 @@ void ScanProcessor::thresholdCloud(intensityCloud::Ptr cloud){
 		passthroughFilter.filter(*cloud);
 	}
 
-
-
 }
 
 void ScanProcessor::removeCloudOutliers(intensityCloud::Ptr cloud){
@@ -235,13 +233,13 @@ void ScanProcessor::removeCloudOutliers(intensityCloud::Ptr cloud){
 		 pcl::StatisticalOutlierRemoval<pcl::PointXYZI> sor;
 		 sor.setInputCloud (cloud);
 		 // Set the number of nearest neighbors to use for mean distance estimation.
-		 sor.setMeanK (50);
+		 sor.setMeanK (20);
 		 /* Set the standard deviation multiplier for the distance threshold calculation.
 		 	 The distance threshold will be equal to: mean + stddev_mult * stddev.
 		 	 Points will be classified as inlier or outlier if their average neighbor
 		 	 distance is below or above this threshold respectively.
 		 */
-		 sor.setStddevMulThresh (0.5);
+		 sor.setStddevMulThresh (1);
 		 sor.setKeepOrganized(false);
 		 sor.filter (*cloud);
 	}else {
@@ -397,8 +395,8 @@ void ScanProcessor::processSonarCloud(){
 	sonarCloudMsg_->scan.header.frame_id = "/map";
 	sonarDebugCloudPublisher_.publish(sonarCloudMsg_->scan);
 	ros::spinOnce();
-	thresholdCloud(tempSonarCloud);
-	//removeCloudOutliers(tempSonarCloud);
+	if (thresholdMode_.find("NONE") ==  -1) thresholdCloud(tempSonarCloud);
+	if (outlierRemovalMode_.find("NONE") == -1)removeCloudOutliers(tempSonarCloud);
 	//sonarCloud_.reset(&upSampleCloud(tempSonarCloud,  ,sonarCloud_));
 	//pcl::toROSMsg(polar2Cartesian(tempSonarCloud), sonarCloudMsg_->scan);
 	pcl::toROSMsg(*(tempSonarCloud), sonarCloudMsg_->scan);
