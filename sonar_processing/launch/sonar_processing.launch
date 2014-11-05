@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<launch>
+
+  <!-- (LASER | SONAR)[CONT] -->
+  <arg name="mode" default="SONAR"/>
+  <arg name="maxBinValue" default="127"/>
+  <!-- TODO Find a better way -->
+  <arg name="scanSize" default="180"/>
+  <!-- OTSU, FIXED, PROPORTIONAL -->
+  <arg name="thresholdType" default="OTSU+FIXED"/>
+  <!-- (STATISTICAL | RADIUS) -->
+  <arg name="outlierRemovalMode" default="NONE"/>
+  <!-- For fixed thresholding -->
+  <arg name="thresholdValue" default="100"/>
+  <!-- For proportional thresholding -->
+  <arg name="thresholdProportion" default="0.7"/>
+  
+  <arg name="OTSUMultiplier" default="1.6"/>
+  <arg name="sonarSubscribeTopic" default="/sonar"/>
+  <arg name="sonarCloudPublishTopic" default="/Sonar/Scan/SonarCloud"/>
+  <arg name="laserCloudPublishTopic" default="/Sonar/Scan/laserCloud"/>
+
+
+  <!-- Run driver. -->
+  <node name="sonar_processing" pkg="sonar_processing" type="ScanProcessor" output="screen">
+    <param name="mode" value="$(arg mode)"/>
+    <param name="maxBinValue" value="$(arg maxBinValue)"/>
+    <param name="scanSize" value="$(arg scanSize)"/>
+    <param name="thresholdType" value="$(arg thresholdType)"/>
+    <param name="outlierRemovalMode" value="$(arg outlierRemovalMode)"/>
+    <param name="thresholdValue" value="$(arg thresholdValue)"/>
+    <param name="thresholdProportion" value="$(arg thresholdProportion)"/>
+    <param name="sonarSubscribeTopic" value="$(arg sonarSubscribeTopic)"/>
+    <param name="sonarCloudPublishTopic" value="$(arg sonarCloudPublishTopic)"/>
+    <param name="laserCloudPublishTopic" value="$(arg laserCloudPublishTopic)"/>
+
+  </node>
+</launch>

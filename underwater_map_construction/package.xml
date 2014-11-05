@@ -1,0 +1,23 @@
+<package>
+
+  	<name>underwater_map_construction</name>
+  	<version>0.0.1</version>
+  	<description>
+  		Descriptive description.
+  	</description>
+  	<maintainer email="ajsarri@gmail.com">Aridane Sarrionandia de León</maintainer>
+  	<license>BSD</license>
+	<buildtool_depend>catkin</buildtool_depend>
+
+	<run_depend>avora_msgs</run_depend>
+	<run_depend>MLSMap_manager</run_depend>
+	<run_depend>sonar_processing</run_depend>
+	<run_depend>sonar_control</run_depend>
+	<run_depend>sonar_simulator</run_depend>
+	
+	
+	<export>
+    	<metapackage/>
+  	</export>
+
+</package>
