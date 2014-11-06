@@ -8,6 +8,7 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/PCLPointCloud2.h>
+#include <pcl/filters/passthrough.h>
 #include <string>
 
 
@@ -47,9 +48,9 @@ namespace sonar_processing
         Thresholder();
         ~Thresholder();
 
-        void cloudCallback(sensor_msgs::PointCloud2ConstPtr cloudMessage);
-        void ThresholdCloud(intensityCloud::Ptr cloudPtr);
-        void getOTSUThreshold(intensityCloud::Ptr cloudPtr);
+        void cloudCallback(sensor_msgs::PointCloud2ConstPtr cloudMessagePtr);
+        void thresholdCloud(intensityCloud::Ptr cloudPtr);
+        double getOTSUThreshold(intensityCloud::Ptr cloudPtr);
         void publishCloud(intensityCloud::Ptr cloudPtr);
     };
 };

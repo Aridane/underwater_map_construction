@@ -1,28 +1,20 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(sonar_processing)
+project(MLSMap_manager)
+
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   avora_msgs
-  cv_bridge
-  image_transport
   roscpp
   sensor_msgs
   std_msgs
-  nav_msgs
-  tf
-  nodelet
-  pluginlib
   tf
 )
 
-
-
 ## System dependencies are found with CMake's conventions
-find_package(Boost REQUIRED COMPONENTS system)
-find_package(OpenCV)
-find_package(PCL REQUIRED)
+# find_package(Boost REQUIRED COMPONENTS system)
+
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -63,7 +55,8 @@ find_package(PCL REQUIRED)
 ## Generate services in the 'srv' folder
 # add_service_files(
 #   FILES
-#   getNewScan.srv
+#   Service1.srv
+#   Service2.srv
 # )
 
 ## Generate actions in the 'action' folder
@@ -89,10 +82,9 @@ find_package(PCL REQUIRED)
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-  INCLUDE_DIRS include
-  LIBRARIES SonarToCloud_nodelet Thresholder_nodelet
-  CATKIN_DEPENDS avora_msgs cv_bridge image_transport roscpp sensor_msgs std_msgs nav_msgs tf nodelet pluginlib
- # LIBRARIES sonar_processing
+#  INCLUDE_DIRS include
+#  LIBRARIES MLSMap_manager
+#  CATKIN_DEPENDS avora_msgs roscpp sensor_msgs std_msgs tf
 #  DEPENDS system_lib
 )
 
@@ -104,51 +96,27 @@ catkin_package(
 ## Your package locations should be listed before other locations
 # include_directories(include)
 include_directories(
-	include
-	${catkin_INCLUDE_DIRS}
+  ${catkin_INCLUDE_DIRS}
 )
-include_directories(${OpenCV_INCLUDE_DIRS})
-
-include_directories(${PCL_INCLUDE_DIRS})
 
 ## Declare a cpp library
-add_library(SonarToCloud_nodelet src/SonarToCloud.cpp)
-add_library(Thresholder_nodelet src/Thresholder.cpp)
+# add_library(MLSMap_manager
+#   src/${PROJECT_NAME}/MLSMap_manager.cpp
+# )
 
 ## Declare a cpp executable
-# add_executable(sonar_processing_node src/sonar_processing_node.cpp)
-add_executable(ScanProcessor src/ScanProcessor.cpp)
-add_executable(Wall2DDetector src/Wall2DDetector.cpp)
+# add_executable(MLSMap_manager_node src/MLSMap_manager_node.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
-# add_dependencies(sonar_processing_node sonar_processing_generate_messages_cpp)
-add_dependencies(ScanProcessor avora_msgs_generate_messages_cpp)
+# add_dependencies(MLSMap_manager_node MLSMap_manager_generate_messages_cpp)
+
+#add_dependencies(ScanProcessor avora_msgs_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(sonar_processing_node
+# target_link_libraries(MLSMap_manager_node
 #   ${catkin_LIBRARIES}
 # )
-
-## Create the nodelet library
-target_link_libraries(SonarToCloud_nodelet ${catkin_LIBRARIES})
-target_link_libraries(Thresholder_nodelet ${catkin_LIBRARIES})
-
-add_dependencies(SonarToCloud_nodelet avora_msgs_generate_messages_cpp)
-add_dependencies(Thresholder_nodelet avora_msgs_generate_messages_cpp)
-if(catkin_EXPORTED_LIBRARIES)
-	add_dependencies(SonarToCloud_nodelet ${catkin_EXPORTED_LIBRARIES})
-	add_dependencies(Thresholder_nodelet ${catkin_EXPORTED_LIBRARIES})
-endif()
-
-
-target_link_libraries(ScanProcessor ${catkin_LIBRARIES}
-									${OpenCV_LIBRARIES}
-									${PCL_LIBRARIES})
-
-target_link_libraries(Wall2DDetector ${catkin_LIBRARIES}
-									 ${PCL_LIBRARIES})
-
 
 #############
 ## Install ##
@@ -164,16 +132,8 @@ target_link_libraries(Wall2DDetector ${catkin_LIBRARIES}
 #   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 # )
 
-## Mark the nodelet library for installations
-install(TARGETS 
-	SonarToCloud_nodelet
-	Thresholder_nodelet
-	ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-	LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-	RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
-
 ## Mark executables and/or libraries for installation
-# install(TARGETS sonar_processing sonar_processing_node
+# install(TARGETS MLSMap_manager MLSMap_manager_node
 #   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -185,10 +145,7 @@ install(TARGETS
 #   FILES_MATCHING PATTERN "*.h"
 #   PATTERN ".svn" EXCLUDE
 # )
-install(DIRECTORY include/
-        DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-	FILES_MATCHING PATTERN "*.h"
-        PATTERN ".git" EXCLUDE)
+
 ## Mark other files for installation (e.g. launch and bag files, etc.)
 # install(FILES
 #   # myfile1
@@ -196,19 +153,12 @@ install(DIRECTORY include/
 #   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 # )
 
-## Mark other files for installation (e.g. launch and bag files, etc.)
-install(FILES
-	SonarToCloud_nodelet_plugins.xml SonarToCloud.launch SonarToCloud_default.yaml
-	Thresholder_nodelet_plugins.xml Thresholder.launch Thresholder_default.yaml
-	DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
-
-
 #############
 ## Testing ##
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_sonar_processing.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_MLSMap_manager.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()

@@ -27,31 +27,33 @@ void Thresholder::onInit()
     cloudSubscriber_ = nh_.subscribe(cloudSubscribeTopic_.c_str(), 0, &Thresholder::cloudCallback, this);
 }
 
-void Thresholder::CloudCallback(sensor_msgs::PointCloud2ConstPtr cloudMessagePtr){
+void Thresholder::cloudCallback(sensor_msgs::PointCloud2ConstPtr cloudMessagePtr){
     //Cloud for thresholding
     intensityCloud::Ptr cloudPtr = boost::make_shared<intensityCloud>();
     //Conver message to intensityCloud
-    pcl::fromROSMsg(cloudMessagePtr, cloudPtr);
+    pcl::fromROSMsg(*cloudMessagePtr, *cloudPtr);
     //Threshold cloud
-    ThresholdCloud(cloudPtr);
+    thresholdCloud(cloudPtr);
     //Publish cloud
-    publishCloud(cloud);
+    publishCloud(cloudPtr);
 }
 
-void Thresholder::ThresholdCloud(intensityCloud::Ptr cloudPtr)
+void Thresholder::thresholdCloud(intensityCloud::Ptr cloudPtr)
 {
     double threshold = 0;
+    pcl::PassThrough<pcl::PointXYZI> passthroughFilter;
+
     if (mode_.find("OTSU") != -1){
         threshold = getOTSUThreshold(cloudPtr);
-        if (mode_.find("PROPOTIONAL") != -1) threshold = threshold * thresholdProportion_;
+        if (mode_.find("PROPOTIONAL") != -1) threshold = threshold * OTSUMultiplier_;
     } else if (mode_.find("FIXED") != -1){
         threshold = fixedThresholdValue_;
     } if (mode_.find("PROPORTIONAL") != -1){
         int maxIntensity = 0, minIntensity = maxBinValue_;
         intensityCloud::iterator cloudIterator;
         for (cloudIterator = cloudPtr->begin();cloudIterator != cloudPtr->end();cloudIterator++){
-            if (cloudIterator->intensity > maxFixed) maxFixed = cloudIterator->intensity;
-            if (cloudIterator->intensity < minFixed) minFixed = cloudIterator->intensity;
+            if (cloudIterator->intensity > maxIntensity) maxIntensity = cloudIterator->intensity;
+            if (cloudIterator->intensity < minIntensity) minIntensity = cloudIterator->intensity;
         }
         threshold = maxThresholdProportion_ * maxIntensity + minThresholdProportion_ * minIntensity;
     }
@@ -68,15 +70,52 @@ void Thresholder::ThresholdCloud(intensityCloud::Ptr cloudPtr)
     passthroughFilter.filter(*cloudPtr);
 }
 
-void Thresholder::getOTSUThreshold(intensityCloud::Ptr cloudPtr){
+double Thresholder::getOTSUThreshold(intensityCloud::Ptr cloudPtr){
+    double threshold = 0;
+    //Histogram
+    std::vector<double> histogram(maxBinValue_ + 1,0);
 
+    //OTSU Method
+    double sum = 0;
+    for (int i=0 ; i<maxBinValue_+1; i++) sum += i * histogram[i];
+
+    double size = cloudPtr->size();
+    double sumB = 0;
+    double wB = 0;
+    double wF = 0;
+    double mB;
+    double mF;
+    double max = 0.0;
+    double between = 0.0;
+    double threshold1 = 0.0;
+    double threshold2 = 0.0;
+
+    for (int i = 0;i<maxBinValue_+1;i++){
+        wB += histogram[i];
+        if (wB == 0) continue;
+        wF = size - wB;
+        if (wF == 0) break;
+        sumB += i * histogram[i];
+        mB = sumB / wB;
+        mF = (sum - sumB) / wF;
+        between = wB * wF * (mB - mF) * (mB - mF);
+        if (between >= max){
+            threshold1 = i;
+            if (between > max)
+                threshold2 = i;
+            max = between;
+        }
+
+    }
+    threshold = (threshold1 + threshold2) / 2.0;
+    return threshold;
 }
 
-void Thresholder::publishCloud(pcl::PointCloud::Ptr cloudPtr){
+void Thresholder::publishCloud(intensityCloud::Ptr cloudPtr){
     sensor_msgs::PointCloud2 cloudMessage;
     pcl::toROSMsg(*cloudPtr,cloudMessage);
     cloudMessage.header.frame_id = "/map";
-    sonarCloudPublisher_.publish(cloudMessage);
+    cloudPublisher_.publish(cloudMessage);
 }
 
 PLUGINLIB_DECLARE_CLASS(sonar_processing, Thresholder, sonar_processing::Thresholder, nodelet::Nodelet)

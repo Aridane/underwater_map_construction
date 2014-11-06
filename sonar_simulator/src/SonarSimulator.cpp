@@ -7,7 +7,11 @@ SonarSimulator::SonarSimulator(ros::NodeHandle* n){
 	nh.param("rate", rate_, double(1));
 	nh.param("step", step_, double(3));
 
+<<<<<<< HEAD
 	sonarLinePublisher_ = n->advertise<avora_msgs::SonarScanLine>("/Sonar/raw",0,this);
+=======
+	sonarLinePublisher_ = n->advertise<avora_msgs::SonarScanLine>("/sonar",0,this);
+>>>>>>> 0b4fa7624ce185fabca4065c462548cd2dedd34a
 
 	scanLine_.angle = 0;
 	scanLine_.gain = 20;
@@ -45,7 +49,11 @@ bool intersection(Point2f o1, Point2f p1, Point2f o2, Point2f p2,
 void SonarSimulator::publishNextLine(){
 	// FILL ScanLine
 	Point2f r, p1;
+<<<<<<< HEAD
     //ROS_INFO("ANGLE %f", scanLine_.angle);
+=======
+	ROS_INFO("ANGLE %f", scanLine_.angle);
+>>>>>>> 0b4fa7624ce185fabca4065c462548cd2dedd34a
 	p1.x = cos(scanLine_.angle*M_PI/180.0) * 20.0;
 	p1.y = sin(scanLine_.angle*M_PI/180.0) * 20.0;
 

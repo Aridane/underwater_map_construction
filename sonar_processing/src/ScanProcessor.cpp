@@ -36,6 +36,7 @@ void ScanProcessor::sonarInit(ros::NodeHandle* n){
 	sonarCloudSize_ = 0;
 	sonarCloudNBeams_ = 0;
 	sonarCloud_->is_dense = true;
+
 }
 
 ScanProcessor::~ScanProcessor(){
@@ -105,7 +106,9 @@ void ScanProcessor::beamCallback(avora_msgs::SonarScanLineConstPtr scanLine){
 		}
 		sonarCloudNBeams_++;
 	}
+
 	oldScanLine_ = scanLine;
+
 }
 
 void ScanProcessor::intensityToRGB(intensityCloud::Ptr cloudIn, rgbCloud::Ptr rgbCloudOut) {

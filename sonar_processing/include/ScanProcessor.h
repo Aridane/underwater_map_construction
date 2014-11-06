@@ -47,7 +47,9 @@ private:
 	int scanSize_;
 
 	vector<double> scanAngles;
-	//TODO Just use point cloud for msg
+
+
+
 	avora_msgs::SonarScanCloudPtr laserCloudMsg_;
 	avora_msgs::SonarScanCloudPtr sonarCloudMsg_;
 	avora_msgs::SonarScanLineConstPtr oldScanLine_;
@@ -55,7 +57,9 @@ private:
 	intensityCloud::Ptr laserCloud_;
 	intensityCloud::Ptr sonarCloud_;
 	ros::Subscriber beamSubscriber_;
+
     ros::Subscriber odomSubscriber_;
+
 	ros::Publisher laserCloudPublisher_;
 	ros::Publisher sonarCloudPublisher_;
 	ros::Publisher sonarDebugCloudPublisher_;
@@ -74,6 +78,7 @@ public:
 	void sonarInit(ros::NodeHandle* n);
 	
 	void beamCallback(avora_msgs::SonarScanLineConstPtr scanLine);
+
 
 	bool hasChanged(avora_msgs::SonarScanLineConstPtr scan, avora_msgs::SonarScanLineConstPtr oldScanLine);
 	void thresholdCloud(intensityCloud::Ptr cloud);

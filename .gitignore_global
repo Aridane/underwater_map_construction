@@ -40,7 +40,10 @@ Thumbs.db
 # Temp files #
 ##############
 *~
+<<<<<<< HEAD
 
 # Qt-cmakelist #
 ##############
 *.user
+=======
+>>>>>>> 0b4fa7624ce185fabca4065c462548cd2dedd34a
