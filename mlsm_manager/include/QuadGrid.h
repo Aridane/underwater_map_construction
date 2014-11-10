@@ -61,8 +61,11 @@ private:
 	grid_type gridNP_;
 
 	gridIndex gridIndex_;
-	int pxSize;
-	int pySize;
+    int pxSize_;
+    int pySize_;
+    int nxSize_;
+    int nySize_;
+
 	
 
 	//TODO List of occupied cells??

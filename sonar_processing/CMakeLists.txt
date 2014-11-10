@@ -90,7 +90,7 @@ find_package(PCL REQUIRED)
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES SonarToCloud_nodelet Thresholder_nodelet
+  LIBRARIES SonarToCloud_nodelet Thresholder_nodelet OutlierRemover_nodelet
   CATKIN_DEPENDS avora_msgs cv_bridge image_transport roscpp sensor_msgs std_msgs nav_msgs tf nodelet pluginlib
  # LIBRARIES sonar_processing
 #  DEPENDS system_lib
@@ -114,6 +114,7 @@ include_directories(${PCL_INCLUDE_DIRS})
 ## Declare a cpp library
 add_library(SonarToCloud_nodelet src/SonarToCloud.cpp)
 add_library(Thresholder_nodelet src/Thresholder.cpp)
+add_library(OutlierRemover_nodelet src/OutlierRemover.cpp)
 
 ## Declare a cpp executable
 # add_executable(sonar_processing_node src/sonar_processing_node.cpp)
@@ -135,10 +136,12 @@ target_link_libraries(SonarToCloud_nodelet ${catkin_LIBRARIES})
 target_link_libraries(Thresholder_nodelet ${catkin_LIBRARIES})
 
 add_dependencies(SonarToCloud_nodelet avora_msgs_generate_messages_cpp)
-add_dependencies(Thresholder_nodelet avora_msgs_generate_messages_cpp)
+#add_dependencies(Thresholder_nodelet avora_msgs_generate_messages_cpp)
+
 if(catkin_EXPORTED_LIBRARIES)
 	add_dependencies(SonarToCloud_nodelet ${catkin_EXPORTED_LIBRARIES})
 	add_dependencies(Thresholder_nodelet ${catkin_EXPORTED_LIBRARIES})
+	add_dependencies(OutlierRemover_nodelet ${catkin_EXPORTED_LIBRARIES})
 endif()
 
 
@@ -168,6 +171,7 @@ target_link_libraries(Wall2DDetector ${catkin_LIBRARIES}
 install(TARGETS 
 	SonarToCloud_nodelet
 	Thresholder_nodelet
+	OutlierRemover_nodelet
 	ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 	LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 	RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
@@ -200,6 +204,7 @@ install(DIRECTORY include/
 install(FILES
 	SonarToCloud_nodelet_plugins.xml SonarToCloud.launch SonarToCloud_default.yaml
 	Thresholder_nodelet_plugins.xml Thresholder.launch Thresholder_default.yaml
+	OutlierRemover_nodelet_plugins.xml OutlierRemover.launch OutlierRemover_default.yaml
 	DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
 

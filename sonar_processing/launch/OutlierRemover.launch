@@ -1,0 +1,9 @@
+<launch>
+	<node pkg="nodelet" type="nodelet" args="manager" name="standalone_nodelet" output="screen"/>
+	
+	<rosparam param="OutlierRemoverNodelet" file="$(find sonar_processing)/yaml/OutlierRemover_default.yaml"/>
+	<node pkg="nodelet" type="nodelet" name="OutlierRemoverNodelet" 
+		args="load sonar_processing/OutlierRemover standalone_nodelet" output="screen">	
+		<rosparam command="load" file="$(find sonar_processing)/yaml/OutlierRemover_default.yaml"/>
+	</node>
+</launch>

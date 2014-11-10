@@ -16,7 +16,8 @@ QuadGrid::QuadGrid(int pxSize, int pySize, int nxSize, int nySize):
 		gridPP_(boost::extents[pxSize][pySize]),
 		gridNN_(boost::extents[nxSize][nySize]),
 		gridPN_(boost::extents[pxSize][nySize]),
-		gridNP_(boost::extents[nxSize][pySize]){
+        gridNP_(boost::extents[nxSize][pySize]),
+    pxSize_(pxSize), pySize_(pySize), nxSize_(nxSize), nySize_(nySize) {
 
 
 
@@ -37,8 +38,11 @@ QuadGrid::QuadGrid(int pxSize, int pySize, int nxSize, int nySize):
 cell* QuadGrid::operator() (const int x, const int y){
 	int p = 0;
 	int n = 0;
-	//++
+    //Out of range access will trigger an assertion fale due to
+    //range checking inside the multi array
+    //++
 	if ((x >= 0) && (y >= 0)){
+        gridPP_.shape()
 		return &(gridPP_[x][y]);
 	}//--
 	else if ((x < 0) && (y < 0)){

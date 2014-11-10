@@ -49,11 +49,7 @@ bool intersection(Point2f o1, Point2f p1, Point2f o2, Point2f p2,
 void SonarSimulator::publishNextLine(){
 	// FILL ScanLine
 	Point2f r, p1;
-<<<<<<< HEAD
-    //ROS_INFO("ANGLE %f", scanLine_.angle);
-=======
-	ROS_INFO("ANGLE %f", scanLine_.angle);
->>>>>>> 0b4fa7624ce185fabca4065c462548cd2dedd34a
+
 	p1.x = cos(scanLine_.angle*M_PI/180.0) * 20.0;
 	p1.y = sin(scanLine_.angle*M_PI/180.0) * 20.0;
 

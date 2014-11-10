@@ -20,7 +20,7 @@ void Thresholder::onInit()
     nh_.param("minThresholdProportion", minThresholdProportion_, double(0.5));
 
     nh_.param("cloudsubscribeTopic", cloudSubscribeTopic_, string("/sonar/scan/sonarCloud"));
-    nh_.param("thresholdedCloudPublishTopic", thresholdedCloudPublishTopic_, string("/sonar/scan/thresholdedCloud"));
+    nh_.param("thresholdedCloudPublishTopic", thresholdedCloudPublishTopic_, string("/sonar/scan/thresholded"));
 
 
     // Subscribe to incoming sonar data from driver

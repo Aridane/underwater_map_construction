@@ -34,9 +34,6 @@ namespace sonar_processing
         ros::Subscriber cloudSubscriber_;
         ros::Publisher cloudPublisher_;
 
-        //Clouds that later will be converted to the message
-        intensityCloud::Ptr cloud_;
-
         //Topic names
         string cloudSubscribeTopic_;
         string thresholdedCloudPublishTopic_;

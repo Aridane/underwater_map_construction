@@ -12,8 +12,6 @@ MLSMCore::MLSMCore(ros::NodeHandle* n){
 
 	map_.init(resolution_,sizeXMeters_,sizeYMeters_);
 
-
-
 	cloudSubscriber_ = n->subscribe(cloudSubscribeTopic_.c_str(), 0, &MLSMCore::cloudCallback, this);
 	markerPublisher_ = n->advertise<visualization_msgs::MarkerArray>(markerPublishTopic_.c_str(), 1);
 }
