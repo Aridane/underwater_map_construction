@@ -1,0 +1,8 @@
+<launch>
+	<node pkg="nodelet" type="nodelet" args="manager" name="standalone_nodelet" output="screen"/>
+
+	<include file="$(find sonar_processing)/launch/SonarToCloud.launch" />
+	<include file="$(find sonar_processing)/launch/Thresholder.launch" />
+	
+	 
+</launch>

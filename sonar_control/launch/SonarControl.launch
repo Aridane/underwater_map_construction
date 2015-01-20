@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<launch>
+
+  <!-- (LASER | SONAR)[CONT] -->
+  <arg name="mode" default="STATIC_MAPPING"/>
+  <arg name="stepSize" default="1"/>
+  <arg name="scanSize" default="120"/>
+  <arg name="sonarSubscribeTopic" default="/charle/sonar"/>
+  <arg name="servoStateTopic" default="/charle/sonar_to_base_link_position_controller/state"/>
+  <arg name="servoCommandTopic" default="/charle/sonar_to_base_link_position_controller/command"/>
+
+
+  <!-- Run driver. -->
+  <node name="sonar_control" pkg="sonar_control" type="SonarControl" output="screen">
+    <param name="mode" value="$(arg mode)"/>
+    <param name="stepSize" value="$(arg stepSize)"/>
+    <param name="scanSize" value="$(arg scanSize)"/>
+    <param name="sonarSubscribeTopic" value="$(arg sonarSubscribeTopic)"/>
+    <param name="servoStateTopic" value="$(arg servoStateTopic)"/>
+    <param name="servoCommandTopic" value="$(arg servoCommandTopic)"/>
+
+  </node>
+</launch>

@@ -1,2 +1,4 @@
-mode: 'LASERSONAR'
-scanSize: 30
+mode: 'SONAR'
+scanSize: 120
+sonarSubscribeTopic: '/charle/sonar'
+targetFrame: 'odom'

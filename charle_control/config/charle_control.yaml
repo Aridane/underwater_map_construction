@@ -1,0 +1,10 @@
+charle:
+  # Publish all joint states -----------------------------------
+  joint_state_controller:
+    type: joint_state_controller/JointStateController
+    publish_rate: 50 
+
+  sonar_to_base_link_position_controller:
+    type: effort_controllers/JointPositionController
+    joint: sonar_to_base_link
+    pid: {p: 420000.0, i: 0.01, d: 10.0}

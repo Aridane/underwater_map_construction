@@ -1,0 +1,33 @@
+	<link name="base_footprint">
+   		<visual>
+			<geometry>
+      				<box size="0.001 0.001 0.001"/>
+     			</geometry>
+			<origin rpy="0 0 0" xyz="0 0 0"/>
+   		</visual>
+			<collision>
+				<geometry>
+	       				<box size="0.2 .3 0.1"/>
+				</geometry>
+			</collision>
+		<xacro:default_inertial mass="0.0001"/>
+ 	</link>
+
+	<gazebo reference="base_footprint">
+		<material>Gazebo/Green</material>
+		<turnGravityOff>false</turnGravityOff>
+	</gazebo>
+
+	<joint name="base_footprint_joint" type="fixed">
+		<origin xyz="0 0 0" />
+		<parent link="base_footprint" />
+		<child link="base_link" />
+	</joint>
+	<!--<xacro:include filename="$(find erratic_description)/urdf/erratic_hokuyo_laser.xacro" />-->
+
+   <!-- BASE LASER ATTACHMENT -->
+   <!--<erratic_hokuyo_laser parent="sonarDato">
+  		<origin xyz="0.0 0 0.0" rpy="0 0 0" />
+  	</erratic_hokuyo_laser>
+
+   -->

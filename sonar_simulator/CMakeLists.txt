@@ -113,19 +113,21 @@ include_directories(${PCL_INCLUDE_DIRS})
 
 ## Declare a cpp executable
 # add_executable(sonar_processing_node src/sonar_processing_node.cpp)
-add_executable(SonarSimulator src/SonarSimulator.cpp)
-
+#add_executable(SonarSimulator src/SonarSimulator.cpp)
+add_executable(CloudSimulator src/CloudSimulator.cpp)
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
 # add_dependencies(sonar_processing_node sonar_processing_generate_messages_cpp)
-add_dependencies(SonarSimulator avora_msgs_generate_messages_cpp)
+#add_dependencies(SonarSimulator avora_msgs_generate_messages_cpp)
+
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(sonar_processing_node
 #   ${catkin_LIBRARIES}
 # )
-target_link_libraries(SonarSimulator ${catkin_LIBRARIES})
-target_link_libraries(SonarSimulator ${OpenCV_LIBRARIES})
-target_link_libraries(SonarSimulator ${PCL_LIBRARIES})
+#target_link_libraries(SonarSimulator ${catkin_LIBRARIES})
+#target_link_libraries(SonarSimulator ${OpenCV_LIBRARIES})
+#target_link_libraries(SonarSimulator ${PCL_LIBRARIES})
+target_link_libraries(CloudSimulator ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 #############
 ## Install ##

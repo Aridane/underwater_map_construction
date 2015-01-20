@@ -33,8 +33,9 @@ public:
 
     BlockType type_;
 
-	pcl::PointXYZI mean_;
+    pcl::PointXYZI mean_;
     pcl::PointXYZI variance_;
+
 	double nPoints_;
 	//Highest Z
 	double height_;
@@ -80,6 +81,9 @@ public:
 	cell* operator() (int x, int y);
 	cell* insert(pcl::PointXYZI point);
     int resize(int newXSize, int newYSize);
+
+    int getXSize();
+    int getYSize();
 
 };
 #endif

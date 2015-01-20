@@ -1,0 +1,9 @@
+<launch>
+	<node pkg="nodelet" type="nodelet" args="manager" name="standalone_nodelet" output="screen"/>
+	
+	<rosparam param="ThresholderNodelet" file="$(find sonar_processing)/yaml/Thresholder_default.yaml"/>
+	<node pkg="nodelet" type="nodelet" name="ThresholderNodelet" 
+		args="load sonar_processing/SonarToCloud standalone_nodelet" output="screen">	
+		<rosparam command="load" file="$(find sonar_processing)/yaml/Thresholder_default.yaml"/>
+	</node>
+</launch>

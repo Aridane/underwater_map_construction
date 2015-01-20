@@ -1,0 +1,20 @@
+digraph G {
+node [shape=box];
+"base_link" [label="base_link"];
+"servo_head" [label="servo_head"];
+"head" [label="head"];
+"sonar" [label="sonar"];
+"laserDato" [label="laserDato"];
+"sonarDato" [label="sonarDato"];
+node [shape=ellipse, color=blue, fontcolor=blue];
+"base_link" -> "servo_head_to_base_link" [label="xyz: 0.38 0 0.16 \nrpy: 0 0.7 3.1414"]
+"servo_head_to_base_link" -> "servo_head"
+"servo_head" -> "head_to_servo_head" [label="xyz: 0 0 0.04 \nrpy: 0 -0 3.14"]
+"head_to_servo_head" -> "head"
+"base_link" -> "sonar_to_base_link" [label="xyz: -0 -0 -0.205 \nrpy: 0 -0 0"]
+"sonar_to_base_link" -> "sonar"
+"sonar" -> "laserDato_to_sonar" [label="xyz: -0 -0.075 -0.02 \nrpy: -1.57159 0.00159265 -0.00159265"]
+"laserDato_to_sonar" -> "laserDato"
+"sonar" -> "sonarDato_to_sonar" [label="xyz: -0 -0.075 -0.02 \nrpy: 1.57 -0 0"]
+"sonarDato_to_sonar" -> "sonarDato"
+}

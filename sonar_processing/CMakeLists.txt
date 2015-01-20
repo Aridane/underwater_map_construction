@@ -112,14 +112,22 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 include_directories(${PCL_INCLUDE_DIRS})
 
 ## Declare a cpp library
-add_library(SonarToCloud_nodelet src/SonarToCloud.cpp)
-add_library(Thresholder_nodelet src/Thresholder.cpp)
-add_library(OutlierRemover_nodelet src/OutlierRemover.cpp)
+set(SONARTOCLOUD_SOURCES src/SonarToCloud.cpp include/SonarToCloud.h)
+add_library(SonarToCloud_nodelet ${SONARTOCLOUD_SOURCES})
+
+set(THRESHOLDER_SOURCES src/Thresholder.cpp include/Thresholder.h)
+add_library(Thresholder_nodelet ${THRESHOLDER_SOURCES})
+
+set(OUTLIER_REMOVER_SOURCES src/OutlierRemover.cpp include/OutlierRemover.h)
+add_library(OutlierRemover_nodelet ${OUTLIER_REMOVER_SOURCES})
 
 ## Declare a cpp executable
 # add_executable(sonar_processing_node src/sonar_processing_node.cpp)
-add_executable(ScanProcessor src/ScanProcessor.cpp)
-add_executable(Wall2DDetector src/Wall2DDetector.cpp)
+set(SCAN_PROCESSOR_SOURCES src/ScanProcessor.cpp include/ScanProcessor.h)
+add_executable(ScanProcessor ${SCAN_PROCESSOR_SOURCES})
+
+set(WALL2DDETECTOR_SOURCES src/Wall2DDetector.cpp include/Wall2DDetector.h)
+add_executable(Wall2DDetector ${WALL2DDETECTOR_SOURCES})
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -133,7 +141,7 @@ add_dependencies(ScanProcessor avora_msgs_generate_messages_cpp)
 
 ## Create the nodelet library
 target_link_libraries(SonarToCloud_nodelet ${catkin_LIBRARIES})
-target_link_libraries(Thresholder_nodelet ${catkin_LIBRARIES})
+target_link_libraries(Thresholder_nodelet ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 add_dependencies(SonarToCloud_nodelet avora_msgs_generate_messages_cpp)
 #add_dependencies(Thresholder_nodelet avora_msgs_generate_messages_cpp)

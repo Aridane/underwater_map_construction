@@ -5,7 +5,9 @@
 //PLUGINLIB_DECLARE_CLASS(sonar_processing, SonarToCloud, sonar_processing::SonarToCloud, nodelet::Nodelet)
 namespace sonar_processing
 {
-SonarToCloud::SonarToCloud(){}
+SonarToCloud::SonarToCloud():
+	listener_()
+{}
 
 SonarToCloud::~SonarToCloud(){}
 
@@ -19,12 +21,16 @@ void SonarToCloud::onInit()
     nh_.param("scanSize", scanSize_, int(160)); // Size in beams of the cloud that will be published
     nh_.param("sonarSubscribeTopic", sonarSubscribeTopic_, string("/Sonar/raw"));
     nh_.param("sonarCloudPublishTopic", sonarCloudPublishTopic_, string("/sonar/scan/sonarCloud"));
+    nh_.param("scanFlagTopic",scanFlagTopic_,string("sonar/scan/flag"));
     nh_.param("laserCloudPublishTopic", laserCloudPublishTopic_, string("/sonar/scan/laserCloud"));
+    nh_.param("targetFrame",targetFrame_,string("odom"));
 
 
     // Subscribe to incoming sonar data from driver
-    beamSubscriber_ = nh_.subscribe(sonarSubscribeTopic_.c_str(), 0, &SonarToCloud::beamCallback, this);
-
+    //beamSubscriber_ = nh_.subscribe(sonarSubscribeTopic_.c_str(), 0, &SonarToCloud::beamCallback, this);
+	scanLine_sub_.subscribe(nh_,sonarSubscribeTopic_.c_str(),10);
+	tf_filter_ = new tf::MessageFilter<avora_msgs::SonarScanLine>(scanLine_sub_, listener_, targetFrame_, 10);
+	tf_filter_->registerCallback( boost::bind(&SonarToCloud::beamCallback, this, _1) );
     // Depending on the mode selected we subscribe advertise the topic needed
     // and initialise the corresponding variables
     if (mode_.find("LASER") != -1) laserInit();
@@ -47,14 +53,15 @@ void SonarToCloud::sonarInit(){
 }
 
 bool SonarToCloud::newAngle(avora_msgs::SonarScanLineConstPtr scan, avora_msgs::SonarScanLineConstPtr oldScanLine){
-    return (scan->sensorAngle != oldScanLine->sensorAngle);
+    return (fabs(scan->sensorAngle - oldScanLine->sensorAngle) > 0.001);
 }
 
 void SonarToCloud::beamCallback(avora_msgs::SonarScanLineConstPtr scanLine){
-    pcl::PointXYZI point;
-    NODELET_INFO("BeamCallback");
+    pcl::PointXYZI pclPoint;
+    geometry_msgs::PointStamped geometryPoint;
+    //NODELET_INFO("BeamCallback");
     if (mode_.find("LASER") != -1){
-        NODELET_INFO("Mode Laser Scan size %d", scanSize_);
+        //NODELET_INFO("Mode Laser Scan size %d", scanSize_);
         // If we have enough readings for the current cloud, or the angle of the sensor has changed
         // we process and send it
         if ((oldScanLine_ != NULL) && (newAngle(scanLine, oldScanLine_)
@@ -83,25 +90,41 @@ void SonarToCloud::beamCallback(avora_msgs::SonarScanLineConstPtr scanLine){
         double rangeResolution = (scanLine->range_resolution == 0) ? 30.0 / 500.0 : scanLine->range_resolution;
         //Here we get where the point is according to the angle read by the sonar. So we have its coordinates
         // in the same plane as the sensor.
-        point.x = (maxIndex + 1) * rangeResolution * cos(scanLine->angle);
-        point.y = (maxIndex + 1) * rangeResolution * sin(scanLine->angle);
-        point.z = 0;
+        geometryPoint.header = scanLine->header;
+        geometryPoint.point.x = (maxIndex + 1) * rangeResolution * cos(scanLine->angle);
+        geometryPoint.point.y = (maxIndex + 1) * rangeResolution * sin(scanLine->angle);
+        geometryPoint.point.z = 0;
         // And then transform them to the robot frame, which means rotating -sensorAngle in the Y axis
-        point.x = point.x * cos(-scanLine->sensorAngle);
+        //point.x = point.x * cos(-scanLine->sensorAngle);
         // Since the rotation is aroung Y, the Y coordinate is not modified
-        point.z = point.x * sin(-scanLine->sensorAngle);
+        //point.z = point.x * sin(-scanLine->sensorAngle);
 
-        point.intensity = scanLine->intensities[maxIndex];
+        try{
+            if (targetFrame_ != scanLine->header.frame_id){
+            	listener_.transformPoint(targetFrame_, geometryPoint, geometryPoint);
+            	laserCloud_->header.frame_id = geometryPoint.header.frame_id;
+            }
+            else laserCloud_->header.frame_id = scanLine->header.frame_id;
+        }
+        catch (tf::TransformException &ex) {
+              ROS_ERROR("%s",ex.what());
+              laserCloud_->header.frame_id = scanLine->header.frame_id;
+        }
+
+        pclPoint.x = geometryPoint.point.x;
+        pclPoint.y = geometryPoint.point.y;
+        pclPoint.z = geometryPoint.point.z;
+        pclPoint.intensity = scanLine->intensities[maxIndex];
 
         //We add the point to the cloud that later will be converted to the ROS message
-        if (point.intensity) laserCloud_->push_back(point);
+        if (pclPoint.intensity) laserCloud_->push_back(pclPoint);
         laserCloudNBeams_++;
     }
     if (mode_.find("SONAR") != -1){
-        NODELET_INFO("Mode Sonar Scan size %d", scanSize_);
+        //NODELET_INFO("Mode Sonar Scan size %d", scanSize_);
         if ((oldScanLine_ != 0) && (newAngle(scanLine, oldScanLine_)
                 || (sonarCloudNBeams_ == scanSize_))) {
-            NODELET_INFO("Scan full with %d beams", scanSize_);
+            //NODELET_INFO("Scan full with %d beams", scanSize_);
 
             sonarCloud_->height = sonarCloudNBeams_;
             sonarCloud_ ->width = oldScanLine_->intensities.size();
@@ -120,20 +143,35 @@ void SonarToCloud::beamCallback(avora_msgs::SonarScanLineConstPtr scanLine){
                 sonarCloudNBeams_ = 0;
             }
         }
-        double rangeResolution = (scanLine->range_resolution == 0) ? 30.0 / 500.0 : scanLine->range_resolution;
+        double rangeResolution = (scanLine->range_resolution == 0) ? scanLine->maxrange_meters / scanLine->intensities.size() : scanLine->range_resolution;
 
         for (int i=0;i<scanLine->intensities.size();i++){
-            point.x = (i + 1) * rangeResolution * cos(scanLine->angle);
-            point.y = (i + 1) * rangeResolution * sin(scanLine->angle);
-            point.z = 0;
+            geometryPoint.header = scanLine->header;
+            geometryPoint.point.x = (i + 1) * rangeResolution * cos(scanLine->angle);
+            geometryPoint.point.y = (i + 1) * rangeResolution * sin(scanLine->angle);
+            geometryPoint.point.z = 0;
             // And then transform them to the robot frame, which means rotating -sensorAngle in the Y axis
-            point.x = point.x * cos(-scanLine->sensorAngle);
+            //point.x = point.x * cos(-scanLine->sensorAngle);
             // Since the rotation is aroung Y, the Y coordinate is not modified
-            point.z = point.x * sin(-scanLine->sensorAngle);
 
-            point.intensity = scanLine->intensities[i];
+            try{
+                if (targetFrame_ != scanLine->header.frame_id){
+                	listener_.transformPoint(targetFrame_, geometryPoint, geometryPoint);
+                	sonarCloud_->header.frame_id = geometryPoint.header.frame_id;
+                }
+                else sonarCloud_->header.frame_id = scanLine->header.frame_id;
+            }
+            catch (tf::TransformException &ex) {
+                  ROS_ERROR("%s",ex.what());
+                  sonarCloud_->header.frame_id = scanLine->header.frame_id;
+            }
 
-            sonarCloud_->push_back(point);
+            pclPoint.x = geometryPoint.point.x;
+            pclPoint.y = geometryPoint.point.y;
+            pclPoint.z = geometryPoint.point.z;
+            pclPoint.intensity = scanLine->intensities[i];
+
+            sonarCloud_->push_back(pclPoint);
             sonarCloudSize_++;
         }
         sonarCloudNBeams_++;
@@ -142,17 +180,19 @@ void SonarToCloud::beamCallback(avora_msgs::SonarScanLineConstPtr scanLine){
 }
 //Now that we have the sonar cloud in "sonarCloud" we convert it to a ROS message and publish it
 void SonarToCloud::publishSonarCloud(){
-    NODELET_INFO("Publish Sonar Cloud");
+    //NODELET_INFO("Publish Sonar Cloud");
     sensor_msgs::PointCloud2 cloudMessage;
     pcl::toROSMsg(*sonarCloud_,cloudMessage);
-    cloudMessage.header.frame_id = "/map";
+    cloudMessage.header.frame_id = sonarCloud_->header.frame_id;
+    cloudMessage.header.stamp = ros::Time::now();
     sonarCloudPublisher_.publish(cloudMessage);
 }
 
 void SonarToCloud::publishLaserCloud(){
     sensor_msgs::PointCloud2 cloudMessage;
     pcl::toROSMsg(*laserCloud_,cloudMessage);
-    cloudMessage.header.frame_id = "/map";
+    cloudMessage.header.frame_id = laserCloud_->header.frame_id;
+    cloudMessage.header.stamp = ros::Time::now();
     laserCloudPublisher_.publish(cloudMessage);
 }
 

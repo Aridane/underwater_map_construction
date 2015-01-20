@@ -1,0 +1,7 @@
+<library path="lib/libThoresholder_nodelet">
+  <class name="sonar_processing/Thresholder" type="sonar_processing::Thresholder" base_class_type="nodelet::Nodelet">
+	  <description>
+	  This is the nodelet that performs thresholding operations on the incoming point clouds.
+	  </description>
+  </class>
+</library>

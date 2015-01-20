@@ -38,11 +38,11 @@ QuadGrid::QuadGrid(int pxSize, int pySize, int nxSize, int nySize):
 cell* QuadGrid::operator() (const int x, const int y){
 	int p = 0;
 	int n = 0;
-    //Out of range access will trigger an assertion fale due to
+    //Out of range access will trigger an assertion fail due to
     //range checking inside the multi array
     //++
 	if ((x >= 0) && (y >= 0)){
-        gridPP_.shape()
+        //gridPP_.shape();
 		return &(gridPP_[x][y]);
 	}//--
 	else if ((x < 0) && (y < 0)){
@@ -54,4 +54,12 @@ cell* QuadGrid::operator() (const int x, const int y){
 	else if ((x < 0) && (y >= 0)){
 		return &(gridNP_[-x][y]);
 	}
+}
+
+int QuadGrid::getXSize(){
+    return 0;
+}
+
+int QuadGrid::getYSize(){
+    return 0;
 }

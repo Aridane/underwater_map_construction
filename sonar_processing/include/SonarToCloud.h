@@ -12,6 +12,12 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/PCLPointCloud2.h>
+
+#include <tf/tf.h>
+#include <tf/transform_listener.h>
+#include <tf/message_filter.h>
+#include <message_filters/subscriber.h>
+
 #include <string>
 
 
@@ -26,6 +32,7 @@ namespace sonar_processing
 	private:
         //Parameters
         string mode_;
+        string targetFrame_;
 		int sonarCloudSize_;
 		int sonarCloudNBeams_;
         int laserCloudNBeams_;
@@ -47,8 +54,13 @@ namespace sonar_processing
         string sonarSubscribeTopic_;
 		string sonarCloudPublishTopic_;
 		string laserCloudPublishTopic_;
+        string scanFlagTopic_;
 		
 		ros::NodeHandle nh_;
+
+        tf::TransformListener listener_;
+        message_filters::Subscriber<avora_msgs::SonarScanLine> scanLine_sub_;
+        tf::MessageFilter<avora_msgs::SonarScanLine> * tf_filter_;
 
 
 	public:

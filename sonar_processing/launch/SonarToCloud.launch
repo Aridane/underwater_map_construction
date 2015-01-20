@@ -1,5 +1,5 @@
 <launch>
-	<node pkg="nodelet" type="nodelet" args="manager" name="standalone_nodelet" output="screen"/>
+	<node pkg="nodelet" type="nodelet" args="manager" name="SonarToCloud_nodelet_manager" output="screen"/>
 	
 	<rosparam param="SonarToCloudNodelet" file="$(find sonar_processing)/yaml/SonarToCloud_default.yaml"/>
 	<node pkg="nodelet" type="nodelet" name="SonarToCloudNodelet" 

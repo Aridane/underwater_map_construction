@@ -8,12 +8,13 @@ MLSMCore::MLSMCore(ros::NodeHandle* n){
 	nh.param("sizeXMeters", sizeXMeters_, double(60));
 	nh.param("sizeYMeters", sizeYMeters_, double(60));
 	nh.param("fastUpdate", fastUpdate_, bool("false"));
-
+    ROS_DEBUG("Initializing map");
 
 	map_.init(resolution_,sizeXMeters_,sizeYMeters_);
 
 	cloudSubscriber_ = n->subscribe(cloudSubscribeTopic_.c_str(), 0, &MLSMCore::cloudCallback, this);
 	markerPublisher_ = n->advertise<visualization_msgs::MarkerArray>(markerPublishTopic_.c_str(), 1);
+    ROS_DEBUG("Initialized");
 }
 
 MLSMCore::~MLSMCore(){
@@ -21,6 +22,7 @@ MLSMCore::~MLSMCore(){
 }
 
 int MLSMCore::addPointCloudToMap(intensityCloud cloud){
+    ROS_DEBUG("Adding point cloud");
 	map_.addPointCloud(cloud);
 	//TODO Publish map
 	//Publish markers provisionally for debugging
@@ -42,6 +44,7 @@ int main(int argc, char** argv){
 	ROS_INFO("MLSM MANAGER STARTS");
 	ros::NodeHandle nh;
 	MLSMCore mlsmCore(&nh);
+    ROS_INFO("MLSM_core Spinning");
 	while(ros::ok()){
 		ros::spinOnce();
 

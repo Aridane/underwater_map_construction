@@ -27,6 +27,7 @@ namespace sonar_processing
         double maxThresholdProportion_;
         double minThresholdProportion_;
         double OTSUMultiplier_;
+        int minThresholdValue_;
 
         int maxBinValue_;
 
@@ -45,7 +46,7 @@ namespace sonar_processing
         Thresholder();
         ~Thresholder();
 
-        void cloudCallback(sensor_msgs::PointCloud2ConstPtr cloudMessagePtr);
+        void cloudCallback(sensor_msgs::PointCloud2Ptr cloudMessagePtr);
         void thresholdCloud(intensityCloud::Ptr cloudPtr);
         double getOTSUThreshold(intensityCloud::Ptr cloudPtr);
         void publishCloud(intensityCloud::Ptr cloudPtr);

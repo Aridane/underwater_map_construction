@@ -1,5 +1,5 @@
 <launch>
-	<node pkg="nodelet" type="nodelet" args="manager" name="standalone_nodelet" output="screen"/>
+	<node pkg="nodelet" type="nodelet" args="manager" name="Thresholder_nodelet_manager" output="screen"/>
 	
 	<rosparam param="ThresholderNodelet" file="$(find sonar_processing)/yaml/Thresholder_default.yaml"/>
 	<node pkg="nodelet" type="nodelet" name="ThresholderNodelet" 

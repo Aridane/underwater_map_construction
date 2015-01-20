@@ -8,6 +8,7 @@ MLSM::MLSM() {
     sizeYMeters_ = DEFAULTSIZEYMETERS;
     grid_ = boost::make_shared<QuadGrid>(
                 QuadGrid(spanX_, spanY_, spanX_, spanY_));
+    markersId = 0;
 }
 
 MLSM::~MLSM() {
@@ -33,14 +34,121 @@ void MLSM::init(double resolution, double sizeXMeters, double sizeYMeters) {
     grid_ = boost::make_shared<QuadGrid>(
                 QuadGrid(spanX_, spanY_, spanX_, spanY_));
 }
+
+
+void addObservationToBlock(boost::shared_ptr<Block> blockPtr, intensityCloud::iterator cloudIterator){
+    //Update height and depth
+    double heightDifference = fabs(blockPtr->height_ - cloudIterator->z);
+    if (blockPtr->height_ < cloudIterator->z) {
+        blockPtr->depth_ += heightDifference;
+        blockPtr->height_ = cloudIterator->z;
+    }
+    else if (heightDifference > blockPtr->depth_) blockPtr->depth_ = heightDifference;
+
+    //Update nPoints
+    blockPtr->nPoints_ = blockPtr->nPoints_ + 1;
+
+    //Update mean
+    blockPtr->mean_.x = (blockPtr->nPoints_ - 1.0)
+            * blockPtr->mean_.x / blockPtr->nPoints_
+            + cloudIterator->x
+            / blockPtr->nPoints_;
+    blockPtr->mean_.y = (blockPtr->nPoints_ - 1.0)
+            * blockPtr->mean_.y / blockPtr->nPoints_
+            + cloudIterator->y / blockPtr->nPoints_;
+    blockPtr->mean_.z = (blockPtr->nPoints_ - 1.0)
+            * blockPtr->mean_.z / blockPtr->nPoints_
+            + cloudIterator->z / blockPtr->nPoints_;
+    blockPtr->mean_.intensity = (blockPtr->nPoints_ - 1.0)
+            * blockPtr->mean_.intensity / blockPtr->nPoints_
+            + cloudIterator->intensity / blockPtr->nPoints_;
+
+
+    //Update variance
+    blockPtr->variance_.x = (blockPtr->nPoints_ - 2.0)
+            * blockPtr->variance_.x / (blockPtr->nPoints_-1.0)
+            + (cloudIterator->x - blockPtr->mean_.x) / (blockPtr->nPoints_ - 1.0);
+    blockPtr->variance_.y = (blockPtr->nPoints_ - 2.0)
+            * blockPtr->variance_.y / (blockPtr->nPoints_-1.0)
+            + (cloudIterator->y - blockPtr->mean_.y) / (blockPtr->nPoints_ - 1.0);
+    blockPtr->variance_.z = (blockPtr->nPoints_ - 2.0)
+            * blockPtr->variance_.z / (blockPtr->nPoints_-1.0)
+            + (cloudIterator->z - blockPtr->mean_.z) / (blockPtr->nPoints_ - 1.0);
+    blockPtr->variance_.intensity = (blockPtr->nPoints_ - 2.0)
+            * blockPtr->variance_.intensity / (blockPtr->nPoints_-1.0)
+            + (cloudIterator->intensity - blockPtr->mean_.intensity) / (blockPtr->nPoints_ - 1.0);
+}
+
+void fuseBlocks(boost::shared_ptr<Block> target, boost::shared_ptr<Block> newBlock){
+    pcl::PointXYZI combinedMean;
+    combinedMean.x = (target->mean_.x + newBlock->mean_.x) * 0.5;
+    combinedMean.y = (target->mean_.y + newBlock->mean_.y) * 0.5;
+    combinedMean.z = (target->mean_.z + newBlock->mean_.z) * 0.5;
+    combinedMean.intensity = (target->mean_.intensity + newBlock->mean_.intensity) * 0.5;
+
+    target->variance_.x = (target->nPoints_*(target->variance_.x
+                                             +((target->mean_.x - combinedMean.x)
+                                               *(target->mean_.x - combinedMean.x))))
+            +(newBlock->nPoints_*(newBlock->variance_.x
+                                  +((newBlock->mean_.x - combinedMean.x)
+                                    *(newBlock->mean_.x - combinedMean.x))));
+
+    target->variance_.y = (target->nPoints_*(target->variance_.y
+                                             +((target->mean_.y - combinedMean.y)
+                                               *(target->mean_.y - combinedMean.y))))
+            +(newBlock->nPoints_*(newBlock->variance_.y
+                                  +((newBlock->mean_.y - combinedMean.y)
+                                    *(newBlock->mean_.y - combinedMean.y))));
+
+    target->variance_.z = (target->nPoints_ *
+                           (target->variance_.z + ((target->mean_.z -
+                                                    combinedMean.z) * (target->mean_.z - combinedMean.z)))) +
+            (newBlock->nPoints_
+             * (newBlock->variance_.z
+                + ((newBlock->mean_.z - combinedMean.z)
+                   * (newBlock->mean_.z - combinedMean.z))));
+
+    target->variance_.intensity = (target->nPoints_ *
+                                   (target->variance_.intensity + ((target->mean_.z -
+                                                                    combinedMean.z) * (target->mean_.z - combinedMean.z))))
+            + (newBlock->nPoints_
+               * (newBlock->variance_.intensity
+                  + ((newBlock->mean_.z - combinedMean.z)
+                     * (newBlock->mean_.z - combinedMean.z))));
+
+    target->mean_.x = combinedMean.x;
+    target->mean_.y = combinedMean.y;
+    target->mean_.z = combinedMean.z;
+    target->mean_.intensity = combinedMean.intensity;
+
+    //Update depth and height
+    /*double lowestZ = 0;
+    if ((newBlock->height_ - newBlock->depth_) < (target->height_ - target->depth_)) lowestZ = newBlock->height_ - newBlock->depth_;
+    else lowestZ = target->height_ - target->depth_;
+    if (newBlock->height_ > target->height_) target->height_ = newBlock->height_;
+    target->depth_ = fabs(target->height_ - lowestZ);*/
+
+    /*Might be worth testing*/
+    double heightDifference = fabs(newBlock->height_ - target->height_);
+    if (newBlock->height_ > target->height_){
+        target->depth_ += heightDifference;
+        target->height_ = newBlock->height_;
+    }
+    else {
+        target->depth_ = newBlock->depth_ + heightDifference;
+    }
+}
+
 //
 // Centre of grid is origin of the world
 //
 //
 //
 int MLSM::addPointCloud(intensityCloud cloud) {
+    //ROS_INFO("\nNEW CLOUD");
     intensityCloud::iterator cloudIterator = cloud.begin();
     boost::shared_ptr<Block> blockPtr;
+    bool candidateFound = false;
     pcl::PointXYZ index;
     pcl::PointXYZI newMean;
     pcl::PointXYZI newVariance;
@@ -49,9 +157,15 @@ int MLSM::addPointCloud(intensityCloud cloud) {
     cell* cellPtr;
     for (; cloudIterator != cloud.end(); cloudIterator++) {
         //Get the indexes
-        index.x = (int) (cloudIterator->x / resolution_);
-        index.y = (int) (cloudIterator->y / resolution_);
-        index.z = (int) (cloudIterator->z / resolution_);
+        index.x = floor(cloudIterator->x / resolution_);
+        index.y = floor(cloudIterator->y / resolution_);
+        index.z = floor(cloudIterator->z / resolution_);
+
+        //Model empty spaces?
+        if (isnan(cloudIterator->x) || isnan(cloudIterator->y) || isnan(cloudIterator->z)) continue;
+        if (cloudIterator->z > 4.7) continue;
+        ROS_DEBUG("Adding point x = %.2f y = %.2f z = %.2f", cloudIterator->x, cloudIterator->y ,cloudIterator->z);
+        ROS_DEBUG("Index x = %d y = %d z=%d",(int)index.x,(int)index.y,(int)index.z);
         //Insert/Update
         //Read position, if exists, update. If doesn't, create.
 
@@ -59,25 +173,44 @@ int MLSM::addPointCloud(intensityCloud cloud) {
         if (((cellPtr = (*grid_)((int) index.x, (int) index.y)) != NULL)
                 && (cellPtr->size() != 0)) {
             //Find block in height Z in cellPtr
-            cell::iterator iterator, end;
+            cell::iterator iterator, end, olditerator;
             bool updated = false;
             cell candidateList;
             /****************************************************************************/
             /*First we obtain all the blocks that are candidates to hold the measurement*/
             /****************************************************************************/
-            for (iterator = cellPtr->begin(), end = cellPtr->end(); iterator != end; ++iterator) {
+            for (iterator = cellPtr->begin(), end = cellPtr->end(); iterator != end;) {
                 //Candidates require |z-height| < resolution
                 // and |height - d - z| < resolution
+                ROS_DEBUG("Block Height %.2f Depth %.2f", iterator->get()->height_, iterator->get()->depth_);
+                ROS_DEBUG("Candidate? %.2f %.2f Size %d", fabs(cloudIterator->z - iterator->get()->height_), fabs(iterator->get()->height_ - iterator->get()->depth_ - cloudIterator->z), cellPtr->size());
                 if ((fabs(cloudIterator->z - iterator->get()->height_) < resolution_) &&
                         (fabs(iterator->get()->height_ - iterator->get()->depth_ - cloudIterator->z) < resolution_)){
-                    candidateList.push_back(cellPtr->at(iterator- cellPtr->begin() + 0));
+                    if (!candidateFound){
+                        ROS_DEBUG("CANDIDATE FOUND!");
+                        blockPtr = cellPtr->at(iterator - cellPtr->begin() + 0);
+                        addObservationToBlock(blockPtr,cloudIterator);
+                        candidateFound = true;
+                    }
+                    else {
+                        ROS_DEBUG("FUSING BLOCKS!");
+                        fuseBlocks(blockPtr,cellPtr->at(iterator - cellPtr->begin() + 0));
+                        ROS_DEBUG("Deleting BLOCK");
+                        iterator = cellPtr->erase(iterator);
+                        ROS_DEBUG("Blocks fused");
+                        end = cellPtr->end();
+                        continue;
+                    }
+                    //candidateList.push_back(cellPtr->at(iterator - cellPtr->begin() + 0));
                 }
+                iterator++;
+
             }
             /****************************************************************************/
             /*If there are more than 1 candidates, we fuse them, if there's only one, we*/
             /*update it, otherwise, we create it                                        */
             /****************************************************************************/
-            if (candidateList.size() == 0){
+            if (!candidateFound){
                 //If the measure is not collected we create a new horizontal block with
                 // height = pz and variance = block variance
 
@@ -94,48 +227,16 @@ int MLSM::addPointCloud(intensityCloud cloud) {
 
                 blockPtr = boost::make_shared<Block>(newMean,newVariance, 1,
                                                      cloudIterator->z, 0.0, FLOOR);
-
+                ROS_DEBUG("NEW BLOCK CREATED");
                 cellPtr->push_back(blockPtr);
                 occupiedBlocks_.push_back(blockPtr);
-            } else if (candidateList.size() == 1){
+            }
+            /*else if (candidateList.size() == 1){
                 //If there is only one block collecting the measurement we update it
-
                 iterator = candidateList.begin();
-                //Update nPoints
-                iterator->get()->nPoints_ = iterator->get()->nPoints_ + 1;
-
-                //Update mean
-                iterator->get()->mean_.x = (iterator->get()->nPoints_ - 1.0)
-                        * iterator->get()->mean_.x / iterator->get()->nPoints_
-                        + cloudIterator->x
-                        / iterator->get()->nPoints_;
-                iterator->get()->mean_.y = (iterator->get()->nPoints_ - 1.0)
-                        * iterator->get()->mean_.y / iterator->get()->nPoints_
-                        + cloudIterator->y / iterator->get()->nPoints_;
-                iterator->get()->mean_.z = (iterator->get()->nPoints_ - 1.0)
-                        * iterator->get()->mean_.z / iterator->get()->nPoints_
-                        + cloudIterator->z / iterator->get()->nPoints_;
-                iterator->get()->mean_.intensity = (iterator->get()->nPoints_ - 1.0)
-                        * iterator->get()->mean_.intensity / iterator->get()->nPoints_
-                        + cloudIterator->intensity / iterator->get()->nPoints_;
-
-
-                //Update variance
-                iterator->get()->variance_.x = (iterator->get()->nPoints_ - 2.0)
-                        * iterator->get()->variance_.x / (iterator->get()->nPoints_-1.0)
-                        + (cloudIterator->x - iterator->get()->mean_.x) / (iterator->get()->nPoints_ - 1.0);
-                iterator->get()->variance_.y = (iterator->get()->nPoints_ - 2.0)
-                        * iterator->get()->variance_.y / (iterator->get()->nPoints_-1.0)
-                        + (cloudIterator->y - iterator->get()->mean_.y) / (iterator->get()->nPoints_ - 1.0);
-                iterator->get()->variance_.z = (iterator->get()->nPoints_ - 2.0)
-                        * iterator->get()->variance_.z / (iterator->get()->nPoints_-1.0)
-                        + (cloudIterator->z - iterator->get()->mean_.z) / (iterator->get()->nPoints_ - 1.0);
-                iterator->get()->variance_.intensity = (iterator->get()->nPoints_ - 2.0)
-                        * iterator->get()->variance_.intensity / (iterator->get()->nPoints_-1.0)
-                        + (cloudIterator->intensity - iterator->get()->mean_.intensity) / (iterator->get()->nPoints_ - 1.0);
-
+                addObservationToBlock(iterator, cloudIterator);
             } else if (candidateList.size() > 1){
-                //if there are several candidates we fuse them
+                //if there are several candidates we fuse them and then add the new observation
                 iterator = candidateList.begin();
                 blockPtr = boost::make_shared<Block>(iterator->get()->mean_, iterator->get()->variance_,
                                                      iterator->get()->nPoints_,
@@ -185,10 +286,13 @@ int MLSM::addPointCloud(intensityCloud cloud) {
                     blockPtr->mean_.intensity = combinedMean.intensity;
 
                 }
-            }
+                // After fused we add the current point
+                addObservationToBlock(iterator, cloudIterator);
+            }*/
         } else if (cellPtr == NULL) {
             ROS_ERROR("[MLSM] GOT NULL cellPtr");
         } else if (cellPtr->size() == 0) {
+            //ROS_INFO("Cell empty: NEW BLOCK CREATED");
             //Empty cell
             newMean.x = cloudIterator->x;
             newMean.y = cloudIterator->y;
@@ -207,6 +311,7 @@ int MLSM::addPointCloud(intensityCloud cloud) {
             cellPtr->push_back(blockPtr);
             occupiedBlocks_.push_back(blockPtr);
         }
+        candidateFound = false;
     }
     return 0;
 }
@@ -215,41 +320,54 @@ visualization_msgs::MarkerArray MLSM::getROSMarkers() {
     visualization_msgs::MarkerArray result;
 
     cell::const_iterator iterator, end;
-    int i=0;
-    for (iterator = occupiedBlocks_.begin(), end = occupiedBlocks_.end();
-         iterator != end; ++iterator) {
-        visualization_msgs::Marker marker;
+    cell* cellPtr = NULL;
+    Block* blockPtr = NULL;
+    int id = 0;
+    for (int i=-spanX_+1;i<spanX_;i++) {
+        for (int j=-spanY_+1;j<spanY_;j++){
+            if((cellPtr = (*grid_)(i,j)) == NULL) continue;
 
-        marker.header.frame_id = "/map";
-        marker.header.stamp = ros::Time::now();
-        marker.ns = "basic_shapes";
-        marker.id = i;
-        i++;
-        marker.type = visualization_msgs::Marker::CUBE;
-        marker.action = visualization_msgs::Marker::ADD;
-        marker.pose.position.x = iterator->get()->mean_.x;
-        marker.pose.position.y = iterator->get()->mean_.y;
-        marker.pose.position.z = iterator->get()->mean_.z;
-        ROS_INFO("MARKER X %f, Y %f, Z %f",marker.pose.position.x,marker.pose.position.y,marker.pose.position.z);
-        marker.pose.orientation.x = 0.0;
-        marker.pose.orientation.y = 0.0;
-        marker.pose.orientation.z = 0.0;
-        marker.pose.orientation.w = 1.0;
+            for (iterator = cellPtr->begin(), end = cellPtr->end(); iterator != end; ++iterator){
+                visualization_msgs::Marker marker;
+                char str[20];
+                marker.header.frame_id = "/odom";
+                marker.header.stamp = ros::Time::now();
+                marker.ns = "basic_shapes";
+                marker.id = markersId;
+                markersId++;
 
-        // Set the scale of the marker -- 1x1x1 here means 1m on a side
-        marker.scale.x = 0.3;
-        marker.scale.y = 0.3;
-        marker.scale.z = 0.3;
+                marker.type = visualization_msgs::Marker::CYLINDER;
+                marker.action = visualization_msgs::Marker::ADD;
 
-        marker.lifetime = ros::Duration();
+                // Set the scale of the marker -- 1x1x1 here means 1m on a side
+                marker.scale.x = resolution_ - 0.1;
+                marker.scale.y = resolution_ - 0.1;
+                if (iterator->get()->depth_ == 0)marker.scale.z = 0.1;
+                else marker.scale.z = iterator->get()->depth_;
 
-        // Set the color -- be sure to set alpha to something non-zero!
-        marker.color.r = 0.0f;
-        marker.color.g = 0.1f;
-        marker.color.b = 0.0f;
-        marker.color.a = 1.0;
+                marker.pose.position.x = (floor(iterator->get()->mean_.x / resolution_)) * resolution_ + resolution_/2.0;
+                marker.pose.position.y = (floor(iterator->get()->mean_.y / resolution_)) * resolution_ + resolution_/2.0;
+                marker.pose.position.z = (iterator->get()->height_ - iterator->get()->depth_) + marker.scale.z /2.0;
 
-        result.markers.push_back(marker);
+                ROS_DEBUG("Mean X %f, Y %f, Z %f",iterator->get()->mean_.x,iterator->get()->mean_.y,iterator->get()->mean_.z);
+                ROS_DEBUG("MARKER X %f, Y %f, Z %f",marker.pose.position.x,marker.pose.position.y,marker.pose.position.z);
+                marker.pose.orientation.x = 0.0;
+                marker.pose.orientation.y = 0.0;
+                marker.pose.orientation.z = 0.0;
+                marker.pose.orientation.w = 1.0;
+
+                marker.lifetime = ros::Duration(5);
+
+                // Set the color -- be sure to set alpha to something non-zero!
+                marker.color.r = (float)(iterator->get()->depth_ / 0.5)/5.0;
+                marker.color.g = 0.0f;
+                marker.color.b = 0.0f;
+                marker.color.a = 0.5;
+
+                result.markers.push_back(marker);
+            }
+        }
     }
+    markersId = 0;
     return result;
 }

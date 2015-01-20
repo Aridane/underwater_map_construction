@@ -83,6 +83,7 @@ find_package(PCL REQUIRED)
 ## LIBRARIES: libraries you create in this project that dependent projects also need
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
+
 catkin_package(
    INCLUDE_DIRS include
    LIBRARIES MLSM
@@ -108,14 +109,14 @@ include_directories(
 # add_library(MLSMap_manager
 #   src/${PROJECT_NAME}/MLSMap_manager.cpp
 # )
-
-add_library(MLSM src/MLSM.cpp src/QuadGrid.cpp)
+set(MLSM_SOURCES src/MLSM.cpp src/QuadGrid.cpp include/MLSM.h include/QuadGrid.h)
+add_library(MLSM ${MLSM_SOURCES})
 target_link_libraries(MLSM ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${Boost_LIBRARIES})
 
 
 ## Declare a cpp executable
 # add_executable(MLSMap_manager_node src/MLSMap_manager_node.cpp)
-
+set(MLSM_CORE_SOURCES src/MLSMCore.cpp include/MLSMCore.h)
 add_executable(MLSM_core src/MLSMCore.cpp)
 
 ## Add cmake target dependencies of the executable/library

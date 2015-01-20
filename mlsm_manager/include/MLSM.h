@@ -25,8 +25,8 @@
 class MLSM{
 private:
 	double resolution_;
-	double spanX_;
-	double spanY_;
+    int spanX_;
+    int spanY_;
 	double sizeXMeters_;
 	double sizeYMeters_;
 
@@ -34,6 +34,7 @@ private:
 
 	cell occupiedBlocks_;
 
+    int markersId;
 public:
 	MLSM();
 	MLSM(double resolution, double sizeXMeters, double sizeYMeters);

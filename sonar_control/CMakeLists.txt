@@ -9,7 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   sensor_msgs
   std_msgs
-  tf
+  control_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -55,8 +55,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate services in the 'srv' folder
 # add_service_files(
 #   FILES
-#   Service1.srv
-#   Service2.srv
+#   requestBehaviour.srv
 # )
 
 ## Generate actions in the 'action' folder
@@ -69,7 +68,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate added messages and services with any dependencies listed here
 # generate_messages(
 #   DEPENDENCIES
-#   avora_msgs#   sensor_msgs#   std_msgs
+#   avora_msgs sensor_msgs std_msgs control_msgs
 # )
 
 ###################################
@@ -84,7 +83,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
   INCLUDE_DIRS include
 #  LIBRARIES MLSMap_manager
-  CATKIN_DEPENDS avora_msgs roscpp sensor_msgs std_msgs tf
+  CATKIN_DEPENDS avora_msgs roscpp sensor_msgs std_msgs control_msgs tf
 #  DEPENDS system_lib
 )
 
@@ -107,7 +106,8 @@ include_directories(
 
 ## Declare a cpp executable
 # add_executable(MLSMap_manager_node src/MLSMap_manager_node.cpp)
-add_executable(SonarControl src/SonarControl.cpp)
+set(SONAR_CONTROL_SOURCES src/SonarControl.cpp include/SonarControl.h)
+add_executable(SonarControl ${SONAR_CONTROL_SOURCES})
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
