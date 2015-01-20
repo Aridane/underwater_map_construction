@@ -16,6 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## System dependencies are found with CMake's conventions
 find_package(Boost REQUIRED COMPONENTS system)
 find_package(PCL REQUIRED)
+find_package(Eigen REQUIRED)
 
 
 ## Uncomment this if the package has a setup.py. This macro ensures
@@ -103,6 +104,7 @@ include_directories(
 	${catkin_INCLUDE_DIRS}
 	${PCL_INCLUDE_DIRS}
 	${Boost_INCLUDE_DIRS}
+  ${EIGEN_INCLUDE_DIR}
 )
 
 ## Declare a cpp library
@@ -112,6 +114,10 @@ include_directories(
 set(MLSM_SOURCES src/MLSM.cpp src/QuadGrid.cpp include/MLSM.h include/QuadGrid.h)
 add_library(MLSM ${MLSM_SOURCES})
 target_link_libraries(MLSM ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${Boost_LIBRARIES})
+
+set(ICP_SOURCES src/ICP.cpp include/ICP.h)
+add_library(ICP ${ICP_SOURCES})
+target_link_libraries(ICP ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${Boost_LIBRARIES} ${EIGEN_LIBRARIES} MLSM)
 
 
 ## Declare a cpp executable
@@ -129,10 +135,8 @@ add_dependencies(MLSM_core avora_msgs_generate_messages_cpp)
 #   ${catkin_LIBRARIES}
 # )
 
-target_link_libraries(MLSM_core ${catkin_LIBRARIES})
-target_link_libraries(MLSM_core ${PCL_LIBRARIES})
-target_link_libraries(MLSM_core ${BOOST_LIBRARIES})
-target_link_libraries(MLSM_core MLSM)
+target_link_libraries(MLSM_core ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${BOOST_LIBRARIES} MLSM ICP)
+
 
 
 
