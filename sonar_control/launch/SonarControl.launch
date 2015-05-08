@@ -4,7 +4,7 @@
 
   <!-- (LASER | SONAR)[CONT] -->
   <arg name="mode" default="STATIC_MAPPING"/>
-  <arg name="stepSize" default="1"/>
+  <arg name="stepSize" default="0.5"/>
   <arg name="scanSize" default="120"/>
   <arg name="sonarSubscribeTopic" default="/charle/sonar"/>
   <arg name="servoStateTopic" default="/charle/sonar_to_base_link_position_controller/state"/>

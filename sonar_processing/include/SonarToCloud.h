@@ -6,6 +6,11 @@
 #include <avora_msgs/SonarScanLine.h>
 #include <avora_msgs/SonarScan.h>
 #include <avora_msgs/SonarScanCloud.h>
+#include <geometry_msgs/Twist.h>
+
+#include <geometry_msgs/TwistWithCovariance.h>
+#include <geometry_msgs/Twist.h>
+#include <nav_msgs/Odometry.h>
 
 #include <pcl/ros/conversions.h>
 #include <pcl_conversions/pcl_conversions.h>
@@ -18,12 +23,15 @@
 #include <tf/message_filter.h>
 #include <message_filters/subscriber.h>
 
+
+
+#include <TypeDefinitions.h>
+
 #include <string>
 
 
 namespace sonar_processing
 {
-	typedef pcl::PointCloud<pcl::PointXYZI> intensityCloud;
 	typedef pcl::PointCloud<pcl::PointXYZRGB> rgbCloud;
 
 	using namespace std;
@@ -45,6 +53,8 @@ namespace sonar_processing
         ros::Subscriber beamSubscriber_;
 	    ros::Publisher laserCloudPublisher_;
 		ros::Publisher sonarCloudPublisher_;
+        ros::Subscriber velSubscriber_;
+
 		
         //Clouds that later will be converted to the message
         intensityCloud::Ptr laserCloud_;
@@ -55,6 +65,7 @@ namespace sonar_processing
 		string sonarCloudPublishTopic_;
 		string laserCloudPublishTopic_;
         string scanFlagTopic_;
+        string velTopic_;
 		
 		ros::NodeHandle nh_;
 
@@ -62,6 +73,15 @@ namespace sonar_processing
         message_filters::Subscriber<avora_msgs::SonarScanLine> scanLine_sub_;
         tf::MessageFilter<avora_msgs::SonarScanLine> * tf_filter_;
 
+        bool moving_;
+        double startTime_;
+        double accumulatedTime_;
+        double heightLimit_;
+        geometry_msgs::Pose poseChange_;
+        geometry_msgs::Pose oldPose_;
+        double lastTime_;
+        double time_;
+        ros::Time oldStamp_;
 
 	public:
 		virtual void onInit();
@@ -72,6 +92,7 @@ namespace sonar_processing
 	
 		void beamCallback(avora_msgs::SonarScanLineConstPtr scanLine);
         bool newAngle(avora_msgs::SonarScanLineConstPtr scan, avora_msgs::SonarScanLineConstPtr oldScanLine);
+        void velCallback(nav_msgs::Odometry msg);
         void publishSonarCloud();
         void publishLaserCloud();
 	};	

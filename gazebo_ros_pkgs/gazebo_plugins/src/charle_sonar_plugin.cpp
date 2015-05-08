@@ -161,7 +161,7 @@ void CharleSonarPlugin::LoadThread()
   {
     ros::AdvertiseOptions ao =
       ros::AdvertiseOptions::create<avora_msgs::SonarScanLine>(
-      this->topic_name_, 1,
+      this->topic_name_, 120,
       boost::bind(&CharleSonarPlugin::LaserConnect, this),
       boost::bind(&CharleSonarPlugin::LaserDisconnect, this),
       ros::VoidPtr(), NULL);
@@ -200,8 +200,8 @@ void CharleSonarPlugin::OnScan(ConstLaserScanStampedPtr &_msg)
 {
   // We got a new message from the Gazebo sensor.  Stuff a
   // corresponding ROS message and publish it.
-  sensor_msgs::LaserScan laser_msg;
-  laser_msg.header.stamp = ros::Time(_msg->time().sec(), _msg->time().nsec());
+  /*sensor_msgs::LaserScan laser_msg;
+  /*laser_msg.header.stamp = ros::Time(_msg->time().sec(), _msg->time().nsec());
   laser_msg.header.frame_id = this->frame_name_;
   laser_msg.angle_min = _msg->scan().angle_min();
   laser_msg.angle_max = _msg->scan().angle_max();
@@ -217,7 +217,7 @@ void CharleSonarPlugin::OnScan(ConstLaserScanStampedPtr &_msg)
   laser_msg.intensities.resize(_msg->scan().intensities_size());
   std::copy(_msg->scan().intensities().begin(),
             _msg->scan().intensities().end(),
-            laser_msg.intensities.begin());
+            laser_msg.intensities.begin());*/
   //this->pub_queue_->push(laser_msg, this->pub_);
   avora_msgs::SonarScanLine sonar_msg;
   sonar_msg.intensities.resize(binCount_);
@@ -226,9 +226,10 @@ void CharleSonarPlugin::OnScan(ConstLaserScanStampedPtr &_msg)
   sonar_msg.maxrange_meters = _msg->scan().range_max();
   sonar_msg.range_resolution = _msg->scan().range_max() / binCount_;
   sonar_msg.angle = ((this->currentStep_+1) * this->step_)*(M_PI / 180.0);
-  int pos = (laser_msg.ranges[currentStep_] * ((double)binCount_)) / _msg->scan().range_max();
+
+  int pos = (_msg->scan().ranges().Get(currentStep_) * ((double)binCount_)) / _msg->scan().range_max();
   int intensity = 128;
-  if (laser_msg.ranges[currentStep_] != _msg->scan().range_max())
+  if (_msg->scan().ranges().Get(currentStep_)!= _msg->scan().range_max())
   {
   	sonar_msg.intensities[pos] = intensity;
 	  int i = 1;

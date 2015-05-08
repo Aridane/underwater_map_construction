@@ -281,7 +281,7 @@ void DiffDrivePlugin::QueueThread()
 void DiffDrivePlugin::publish_odometry()
 {
   ros::Time current_time = ros::Time::now();
-  std::string odom_frame = tf::resolve(tf_prefix_, "odom");
+  /*std::string odom_frame = tf::resolve(tf_prefix_, "odom");
   std::string base_footprint_frame = tf::resolve(tf_prefix_, "base_footprint");
 
   // getting data for base_footprint to odom transform
@@ -295,7 +295,35 @@ void DiffDrivePlugin::publish_odometry()
   transform_broadcaster_->sendTransform(tf::StampedTransform(base_footprint_to_odom,
                                                              current_time,
                                                              odom_frame,
-                                                             base_footprint_frame));
+                                                             base_footprint_frame));*/
+
+ std::string odom_frame = tf::resolve(tf_prefix_, "odom");
+  std::string base_footprint_frame = tf::resolve(tf_prefix_, "depth");
+
+  // getting data for base_footprint to odom transform
+  math::Pose pose = this->parent->GetWorldPose();
+
+
+  tf::Quaternion qt(pose.rot.x, pose.rot.y, pose.rot.z, pose.rot.w);
+  tf::Vector3 vt(pose.pos.x, pose.pos.y, 0);
+
+  tf::Transform depth_to_odom(qt, vt);
+  transform_broadcaster_->sendTransform(tf::StampedTransform(depth_to_odom,
+                                                             current_time,
+                                                             odom_frame,
+                                                             "depth"));
+
+
+  qt.setRPY(0, 0, 0);;
+  tf::Vector3 vt2(0, 0, pose.pos.z);
+
+  tf::Transform base_footprint_to_depth(qt, vt2);
+  transform_broadcaster_->sendTransform(tf::StampedTransform(base_footprint_to_depth,
+                                                             current_time,
+                                                             "depth",
+                                                             "base_footprint"));
+
+
 
   // publish odom topic
   odom_.pose.pose.position.x = pose.pos.x;

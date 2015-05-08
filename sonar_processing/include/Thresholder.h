@@ -10,11 +10,12 @@
 #include <pcl/PCLPointCloud2.h>
 #include <pcl/filters/passthrough.h>
 #include <string>
+#include <TypeDefinitions.h>
 
 
 namespace sonar_processing
 {
-    typedef pcl::PointCloud<pcl::PointXYZI> intensityCloud;
+   // typedef pcl::PointCloud<pcl::PointXYZI> intensityCloud;
     typedef pcl::PointCloud<pcl::PointXYZRGB> rgbCloud;
 
     using namespace std;

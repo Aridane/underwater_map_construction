@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(mlsm_manager)
-
+set(CMAKE_BUILD_TYPE Debug)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   std_msgs
   tf
+  type_definitions
 )
 
 ## System dependencies are found with CMake's conventions
@@ -104,26 +105,36 @@ include_directories(
 	${catkin_INCLUDE_DIRS}
 	${PCL_INCLUDE_DIRS}
 	${Boost_INCLUDE_DIRS}
-  ${EIGEN_INCLUDE_DIR}
+  	${EIGEN_INCLUDE_DIR}
+	../ann_1.1.2/include  	
 )
 
 ## Declare a cpp library
 # add_library(MLSMap_manager
 #   src/${PROJECT_NAME}/MLSMap_manager.cpp
 # )
+
+set(KDTREE_SOURCES src/kdtree.c include/kdtree.h)
+add_library(KDTREE ${KDTREE_SOURCES})
+target_link_libraries(KDTREE ${catkin_LIBRARIES})
+
+#link_directories(../ann_1.1.2/lib)
+
 set(MLSM_SOURCES src/MLSM.cpp src/QuadGrid.cpp include/MLSM.h include/QuadGrid.h)
 add_library(MLSM ${MLSM_SOURCES})
-target_link_libraries(MLSM ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${Boost_LIBRARIES})
+target_link_libraries(MLSM ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${Boost_LIBRARIES} KDTREE)#libANN KDTREE)
 
 set(ICP_SOURCES src/ICP.cpp include/ICP.h)
 add_library(ICP ${ICP_SOURCES})
 target_link_libraries(ICP ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${Boost_LIBRARIES} ${EIGEN_LIBRARIES} MLSM)
 
 
+
+
 ## Declare a cpp executable
 # add_executable(MLSMap_manager_node src/MLSMap_manager_node.cpp)
 set(MLSM_CORE_SOURCES src/MLSMCore.cpp include/MLSMCore.h)
-add_executable(MLSM_core src/MLSMCore.cpp)
+add_executable(MLSM_core ${MLSM_CORE_SOURCES})
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -135,7 +146,7 @@ add_dependencies(MLSM_core avora_msgs_generate_messages_cpp)
 #   ${catkin_LIBRARIES}
 # )
 
-target_link_libraries(MLSM_core ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${BOOST_LIBRARIES} MLSM ICP)
+target_link_libraries(MLSM_core ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${BOOST_LIBRARIES} MLSM ICP KDTREE)
 
 
 

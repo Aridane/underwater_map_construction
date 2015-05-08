@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   nodelet
   pluginlib
   tf
+  type_definitions
 )
 
 
@@ -91,7 +92,7 @@ find_package(PCL REQUIRED)
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES SonarToCloud_nodelet Thresholder_nodelet OutlierRemover_nodelet
-  CATKIN_DEPENDS avora_msgs cv_bridge image_transport roscpp sensor_msgs std_msgs nav_msgs tf nodelet pluginlib
+  CATKIN_DEPENDS avora_msgs cv_bridge image_transport roscpp sensor_msgs std_msgs nav_msgs tf nodelet pluginlib type_definitions
  # LIBRARIES sonar_processing
 #  DEPENDS system_lib
 )

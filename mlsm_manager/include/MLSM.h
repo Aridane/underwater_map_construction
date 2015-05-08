@@ -15,13 +15,15 @@
 #include <pcl/point_types.h>
 
 #include <boost/multi_array.hpp>
-
+#include <kdtree.h>
+//#include <ANN/ANN.h>
 #include "QuadGrid.h"
 
 //0.3 M x 100 = 30M
 #define DEFAULTSIZEXMETERS 30.0
 #define DEFAULTSIZEYMETERS 30.0
-
+using namespace mlsm;
+using namespace std;
 class MLSM{
 private:
 	double resolution_;
@@ -29,20 +31,31 @@ private:
     int spanY_;
 	double sizeXMeters_;
 	double sizeYMeters_;
+    double verticalElasticity_;
 
 	boost::shared_ptr<QuadGrid> grid_;
 
 	cell occupiedBlocks_;
 
     int markersId;
+    struct kdtree* kdtree_;
+    //ANNkd_tree* kdTree;
 public:
 	MLSM();
-	MLSM(double resolution, double sizeXMeters, double sizeYMeters);
+    MLSM(double resolution, double sizeXMeters, double sizeYMeters, double verticalElasticity);
 	~MLSM();
 	//Restart with given paraMeters
-	void init(double resolution, double sizeXMeters, double sizeYMeters);
+    void init(double resolution, double sizeXMeters, double sizeYMeters, double verticalElasticity);
 
-	int addPointCloud(intensityCloud cloud);
-	visualization_msgs::MarkerArray getROSMarkers();
+    int getSpanX();
+    int getSpanY();
+    int addPointCloud(intensityCloud::Ptr cloud);
+    visualization_msgs::MarkerArray getROSMarkers(string frameId);
+    double getResolution();
+    bool checkCell(int i, int j);
+    Block* findSuitableBlock(int i, int j, pcl::PointXYZI point);
+    Block* findSuitableBlock(cellPtr cellP, pcl::PointXYZI point);
+    Block* findClosestBlock(pcl::PointXYZI point);
+
 };
 #endif

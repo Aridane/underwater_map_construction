@@ -1,6 +1,7 @@
 #include "MLSM.h"
 
 MLSM::MLSM() {
+    kdtree_ = kd_create(2);
     resolution_ = 0.3;
     spanX_ = DEFAULTSIZEXMETERS / resolution_;
     spanY_ = DEFAULTSIZEYMETERS / resolution_;
@@ -15,7 +16,8 @@ MLSM::~MLSM() {
 
 }
 
-MLSM::MLSM(double resolution, double sizeXMeters, double sizeYMeters) {
+MLSM::MLSM(double resolution, double sizeXMeters, double sizeYMeters, double verticalElasticity) {
+    kdtree_ = kd_create(2);
     resolution_ = resolution;
     sizeXMeters_ = sizeXMeters;
     sizeYMeters_ = sizeYMeters;
@@ -23,9 +25,11 @@ MLSM::MLSM(double resolution, double sizeXMeters, double sizeYMeters) {
     spanY_ = sizeYMeters / resolution;
     grid_ = boost::make_shared<QuadGrid>(
                 QuadGrid(spanX_, spanY_, spanX_, spanY_));
+    verticalElasticity_ = verticalElasticity;
 }
 
-void MLSM::init(double resolution, double sizeXMeters, double sizeYMeters) {
+void MLSM::init(double resolution, double sizeXMeters, double sizeYMeters, double verticalElasticity) {
+    kdtree_ = kd_create(2);
     resolution_ = resolution;
     sizeXMeters_ = sizeXMeters;
     sizeYMeters_ = sizeYMeters;
@@ -33,8 +37,149 @@ void MLSM::init(double resolution, double sizeXMeters, double sizeYMeters) {
     spanY_ = sizeYMeters / resolution;
     grid_ = boost::make_shared<QuadGrid>(
                 QuadGrid(spanX_, spanY_, spanX_, spanY_));
+    verticalElasticity_ = verticalElasticity;
 }
 
+double MLSM::getResolution(){
+    return resolution_;
+}
+
+int MLSM::getSpanX(){
+    return spanX_;
+}
+
+int MLSM::getSpanY(){
+    return spanY_;
+}
+
+bool MLSM::checkCell(int i, int j){
+    return ((*grid_)(i,j) ? true : false);
+}
+
+Block* MLSM::findClosestBlock(pcl::PointXYZI point){
+    Block* blockPtr = NULL;
+    struct kdres *closestCellRes;
+    double pos[2];
+
+    pos[0] = floor(point.x / resolution_);
+    pos[1] = floor(point.y / resolution_);
+
+    //ROS_INFO("Point %g %g",pos[0],pos[1]);
+
+    // Find correct cell
+    //ROS_INFO("GET NEAREST POINT");
+    closestCellRes = kd_nearest(kdtree_, pos);
+    //ROS_INFO("Find suitable block %d",closestCellRes->size);
+    kd_res_item(closestCellRes, pos);
+
+    //int i = (int)(round(pos[0]));
+    //int j = (int)(round(pos[1]));
+    //cellPos = (int*)kd_res_item_data(closestCellRes);
+    //ROS_INFO("iCell %d %d",i,j);
+    //ROS_INFO("fCell %f %f",pos[0],pos[1]);
+    //if (cellP != NULL) ROS_INFO("NOT NULL CELL");
+    //else ROS_INFO("NULL CELL");
+    // Find suitable block in cell
+
+    blockPtr = findSuitableBlock(round(pos[0]),round(pos[1]),point);
+    //ROS_INFO("Suitable block found?");
+    return blockPtr;
+
+}
+
+Block* MLSM::findSuitableBlock(cellPtr cellP, pcl::PointXYZI point){
+    Block* blockPtr = NULL;
+    double closestZ = 99999;
+    bool candidateFound = false;
+    if ((cellP != NULL)
+            && (cellP->size() != 0)) {
+        ROS_INFO("Getting the block");
+        //Find block in height Z in cellP
+        cell::iterator iterator, end, olditerator;
+        bool updated = false;
+        cell candidateList;
+        // We follow exactly the same procedure as we did for inserting the block
+        for (iterator = cellP->begin(); iterator != cellP->end();) {
+
+            if (fabs(point.z - iterator->get()->mean_.x) < closestZ){
+                closestZ = fabs(point.z - iterator->get()->mean_.x);
+                blockPtr = (cellP->at(iterator - cellP->begin() + 0)).get();
+
+            }
+
+                if ((fabs(point.z - iterator->get()->height_) < resolution_) ||
+                    (fabs(iterator->get()->height_ - iterator->get()->depth_ - point.z) < resolution_)){
+                if (!candidateFound){
+                    blockPtr = (cellP->at(iterator - cellP->begin() + 0)).get();
+
+                    //addObservationToBlock(blockPtr,cloudIterator);
+                    //candidateFound = true;
+                    return blockPtr;
+                }
+                /*else {
+                    ROS_DEBUG("FUSING BLOCKS!");
+                    fuseBlocks(blockPtr,cellP->at(iterator - cellP->begin() + 0));
+                    ROS_DEBUG("Deleting BLOCK");
+                    iterator = cellP->erase(iterator);
+                    ROS_DEBUG("Blocks fused");
+                    end = cellP->end();
+                    continue;
+                }*/
+                //candidateList.push_back(cellP->at(iterator - cellP->begin() + 0));
+            }
+            iterator++;
+
+        }
+    }
+    return blockPtr;
+}
+
+Block* MLSM::findSuitableBlock(int i, int j, pcl::PointXYZI point){
+    Block* blockPtr = NULL;
+    cell* cellP;
+    double closestZ = 99999;
+    bool candidateFound = false;
+    if (((cellP = (*grid_)(i, j)) != NULL)
+            && (cellP->size() != 0)) {
+        //Find block in height Z in cellP
+        cell::iterator iterator, end, olditerator;
+        bool updated = false;
+        cell candidateList;
+        // We follow exactly the same procedure as we did for inserting the block
+        for (iterator = cellP->begin(); iterator != cellP->end();) {
+
+            if (fabs(point.z - iterator->get()->mean_.x) < closestZ){
+                closestZ = fabs(point.z - iterator->get()->mean_.x);
+                blockPtr = (cellP->at(iterator - cellP->begin() + 0)).get();
+
+            }
+
+                if ((fabs(point.z - iterator->get()->height_) < resolution_) ||
+                    (fabs(iterator->get()->height_ - iterator->get()->depth_ - point.z) < resolution_)){
+                if (!candidateFound){
+                    blockPtr = (cellP->at(iterator - cellP->begin() + 0)).get();
+
+                    //addObservationToBlock(blockPtr,cloudIterator);
+                    //candidateFound = true;
+                    return blockPtr;
+                }
+                /*else {
+                    ROS_DEBUG("FUSING BLOCKS!");
+                    fuseBlocks(blockPtr,cellP->at(iterator - cellP->begin() + 0));
+                    ROS_DEBUG("Deleting BLOCK");
+                    iterator = cellP->erase(iterator);
+                    ROS_DEBUG("Blocks fused");
+                    end = cellP->end();
+                    continue;
+                }*/
+                //candidateList.push_back(cellP->at(iterator - cellP->begin() + 0));
+            }
+            iterator++;
+
+        }
+    }
+    return blockPtr;
+}
 
 void addObservationToBlock(boost::shared_ptr<Block> blockPtr, intensityCloud::iterator cloudIterator){
     //Update height and depth
@@ -144,9 +289,9 @@ void fuseBlocks(boost::shared_ptr<Block> target, boost::shared_ptr<Block> newBlo
 //
 //
 //
-int MLSM::addPointCloud(intensityCloud cloud) {
+int MLSM::addPointCloud(intensityCloud::Ptr cloud) {
     //ROS_INFO("\nNEW CLOUD");
-    intensityCloud::iterator cloudIterator = cloud.begin();
+    intensityCloud::iterator cloudIterator = cloud->begin();
     boost::shared_ptr<Block> blockPtr;
     bool candidateFound = false;
     pcl::PointXYZ index;
@@ -154,8 +299,8 @@ int MLSM::addPointCloud(intensityCloud cloud) {
     pcl::PointXYZI newVariance;
 
     bool expand = false;
-    cell* cellPtr;
-    for (; cloudIterator != cloud.end(); cloudIterator++) {
+    cell* cellP;
+    for (; cloudIterator != cloud->end(); cloudIterator++) {
         //Get the indexes
         index.x = floor(cloudIterator->x / resolution_);
         index.y = floor(cloudIterator->y / resolution_);
@@ -170,38 +315,37 @@ int MLSM::addPointCloud(intensityCloud cloud) {
         //Read position, if exists, update. If doesn't, create.
 
 
-        if (((cellPtr = (*grid_)((int) index.x, (int) index.y)) != NULL)
-                && (cellPtr->size() != 0)) {
-            //Find block in height Z in cellPtr
+        if (((cellP = (*grid_)((int) index.x, (int) index.y)) != NULL)
+                && (cellP->size() != 0)) {
+            //Find block in height Z in cellP
             cell::iterator iterator, end, olditerator;
             bool updated = false;
             cell candidateList;
             /****************************************************************************/
             /*First we obtain all the blocks that are candidates to hold the measurement*/
             /****************************************************************************/
-            for (iterator = cellPtr->begin(), end = cellPtr->end(); iterator != end;) {
-                //Candidates require |z-height| < resolution
-                // and |height - d - z| < resolution
-                ROS_DEBUG("Block Height %.2f Depth %.2f", iterator->get()->height_, iterator->get()->depth_);
-                ROS_DEBUG("Candidate? %.2f %.2f Size %d", fabs(cloudIterator->z - iterator->get()->height_), fabs(iterator->get()->height_ - iterator->get()->depth_ - cloudIterator->z), cellPtr->size());
-                if ((fabs(cloudIterator->z - iterator->get()->height_) < resolution_) &&
-                        (fabs(iterator->get()->height_ - iterator->get()->depth_ - cloudIterator->z) < resolution_)){
+            for (iterator = cellP->begin(); iterator != cellP->end();) {
+                if ((fabs(cloudIterator->z - iterator->get()->height_) < resolution_)
+                            ||(fabs(iterator->get()->height_ - iterator->get()->depth_ - cloudIterator->z) < resolution_)
+                            || ((cloudIterator->z < iterator->get()->height_)
+                                &&(cloudIterator->z > (iterator->get()->height_ - iterator->get()->depth_))))
+                {
                     if (!candidateFound){
                         ROS_DEBUG("CANDIDATE FOUND!");
-                        blockPtr = cellPtr->at(iterator - cellPtr->begin() + 0);
+                        blockPtr = cellP->at(iterator - cellP->begin() + 0);
                         addObservationToBlock(blockPtr,cloudIterator);
                         candidateFound = true;
                     }
                     else {
                         ROS_DEBUG("FUSING BLOCKS!");
-                        fuseBlocks(blockPtr,cellPtr->at(iterator - cellPtr->begin() + 0));
+                        fuseBlocks(blockPtr,cellP->at(iterator - cellP->begin() + 0));
                         ROS_DEBUG("Deleting BLOCK");
-                        iterator = cellPtr->erase(iterator);
+                        iterator = cellP->erase(iterator);
                         ROS_DEBUG("Blocks fused");
-                        end = cellPtr->end();
+                        end = cellP->end();
                         continue;
                     }
-                    //candidateList.push_back(cellPtr->at(iterator - cellPtr->begin() + 0));
+                    //candidateList.push_back(cellP->at(iterator - cellP->begin() + 0));
                 }
                 iterator++;
 
@@ -228,7 +372,7 @@ int MLSM::addPointCloud(intensityCloud cloud) {
                 blockPtr = boost::make_shared<Block>(newMean,newVariance, 1,
                                                      cloudIterator->z, 0.0, FLOOR);
                 ROS_DEBUG("NEW BLOCK CREATED");
-                cellPtr->push_back(blockPtr);
+                cellP->push_back(blockPtr);
                 occupiedBlocks_.push_back(blockPtr);
             }
             /*else if (candidateList.size() == 1){
@@ -289,9 +433,9 @@ int MLSM::addPointCloud(intensityCloud cloud) {
                 // After fused we add the current point
                 addObservationToBlock(iterator, cloudIterator);
             }*/
-        } else if (cellPtr == NULL) {
-            ROS_ERROR("[MLSM] GOT NULL cellPtr");
-        } else if (cellPtr->size() == 0) {
+        } else if (cellP == NULL) {
+            ROS_ERROR("[MLSM] GOT NULL cellP");
+        } else if (cellP->size() == 0) {
             //ROS_INFO("Cell empty: NEW BLOCK CREATED");
             //Empty cell
             newMean.x = cloudIterator->x;
@@ -308,29 +452,33 @@ int MLSM::addPointCloud(intensityCloud cloud) {
             blockPtr = boost::make_shared<Block>(newMean,newVariance, 1,
                                                  cloudIterator->z, 0.0, FLOOR);
 
-            cellPtr->push_back(blockPtr);
+            cellP->push_back(blockPtr);
             occupiedBlocks_.push_back(blockPtr);
+            double pos[2] = { round(index.x), round(index.y)};
+            assert(kd_insert( kdtree_, pos,0) == 0);
         }
         candidateFound = false;
     }
     return 0;
 }
 
-visualization_msgs::MarkerArray MLSM::getROSMarkers() {
+
+
+visualization_msgs::MarkerArray MLSM::getROSMarkers(string frameId) {
     visualization_msgs::MarkerArray result;
 
     cell::const_iterator iterator, end;
-    cell* cellPtr = NULL;
+    cell* cellP = NULL;
     Block* blockPtr = NULL;
     int id = 0;
     for (int i=-spanX_+1;i<spanX_;i++) {
         for (int j=-spanY_+1;j<spanY_;j++){
-            if((cellPtr = (*grid_)(i,j)) == NULL) continue;
+            if((cellP = (*grid_)(i,j)) == NULL) continue;
 
-            for (iterator = cellPtr->begin(), end = cellPtr->end(); iterator != end; ++iterator){
+            for (iterator = cellP->begin(), end = cellP->end(); iterator != end; ++iterator){
                 visualization_msgs::Marker marker;
                 char str[20];
-                marker.header.frame_id = "/odom";
+                marker.header.frame_id = frameId;
                 marker.header.stamp = ros::Time::now();
                 marker.ns = "basic_shapes";
                 marker.id = markersId;
@@ -349,14 +497,14 @@ visualization_msgs::MarkerArray MLSM::getROSMarkers() {
                 marker.pose.position.y = (floor(iterator->get()->mean_.y / resolution_)) * resolution_ + resolution_/2.0;
                 marker.pose.position.z = (iterator->get()->height_ - iterator->get()->depth_) + marker.scale.z /2.0;
 
-                ROS_DEBUG("Mean X %f, Y %f, Z %f",iterator->get()->mean_.x,iterator->get()->mean_.y,iterator->get()->mean_.z);
-                ROS_DEBUG("MARKER X %f, Y %f, Z %f",marker.pose.position.x,marker.pose.position.y,marker.pose.position.z);
+                //ROS_DEBUG("Mean X %f, Y %f, Z %f",iterator->get()->mean_.x,iterator->get()->mean_.y,iterator->get()->mean_.z);
+                //ROS_DEBUG("MARKER X %f, Y %f, Z %f",marker.pose.position.x,marker.pose.position.y,marker.pose.position.z);
                 marker.pose.orientation.x = 0.0;
                 marker.pose.orientation.y = 0.0;
                 marker.pose.orientation.z = 0.0;
                 marker.pose.orientation.w = 1.0;
 
-                marker.lifetime = ros::Duration(5);
+                marker.lifetime = ros::Duration(20);
 
                 // Set the color -- be sure to set alpha to something non-zero!
                 marker.color.r = (float)(iterator->get()->depth_ / 0.5)/5.0;

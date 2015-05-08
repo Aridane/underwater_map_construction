@@ -1,6 +1,6 @@
 cloudSubscribeTopic: '/sonar/scan/thresholded'
 markerPublishTopic: '/MLSM/Markers'
-resolution: 1
+resolution: 0.5
 sizeXMeters: 60
 sizeYMeters: 60
 fastUpdate: false

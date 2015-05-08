@@ -30,6 +30,7 @@ void Thresholder::onInit()
 }
 
 void Thresholder::cloudCallback(sensor_msgs::PointCloud2Ptr cloudMessagePtr){
+
     //Cloud for thresholding
     intensityCloud::Ptr cloudPtr = boost::make_shared<intensityCloud>();
     //Conver message to intensityCloud

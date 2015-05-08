@@ -137,7 +137,12 @@
        				<cylinder length="0.01" radius="0.03"/>
 			</geometry>
  	 </collision>
-      <xacro:default_inertial mass="0.5"/>
+                  <inertial>
+                       <mass value="0.01" />
+                       <inertia ixx="1" ixy="0.0" ixz="0.0"
+                                iyy="1" iyz="0.0"
+                                izz="0.001" />
+               </inertial>
 
   </link>
 

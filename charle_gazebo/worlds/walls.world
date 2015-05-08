@@ -2,7 +2,7 @@
 <sdf version="1.4">
   <world name="default">
     	<physics type="ode">
-      <gravity>0 0 0.1</gravity>
+      <gravity>0 0 0.3</gravity>
       <ode>
 		<solver>
           <type>quick</type>
@@ -41,20 +41,20 @@
     </include>
 
  	<model name="wall_1">
-      <pose>-2 4 0 0 0 0</pose>
+      <pose>2.5 -4 0 0 0 0</pose>
       <static>true</static>
       <link name="wall_1">
 	      <collision name='collision_wall_1'>
 	        <geometry>
 	            <box>
-	                <size>100 0.2 15</size>
+	                <size>17 0.2 10</size>
 	            </box>
 	        </geometry>
 	      </collision>
 	      <visual name='visual_wall_1'>
 	        <geometry>
 	            <box>
-	                <size>100 0.2 15</size>
+	                <size>17 0.2 10</size>
 	            </box>
 	        </geometry>
         <material>
@@ -68,20 +68,20 @@
     </model>
 
      	<model name="wall_2">
-      <pose>-2 -4 0 0 0 0</pose>
+      <pose>0 4 0 0 0 0</pose>
       <static>true</static>
       <link name="wall_2">
 	      <collision name='collision_wall_2'>
 	        <geometry>
 	            <box>
-	                <size>100 0.2 15</size>
+	                <size>12 0.2 10</size>
 	            </box>
 	        </geometry>
 	      </collision>
 	      <visual name='visual_wall_2'>
 	        <geometry>
 	            <box>
-	                <size>100 0.2 15</size>
+	                <size>12 0.2 10</size>
 	            </box>
 	        </geometry>
         <material>
@@ -92,6 +92,33 @@
         </material>
 	      </visual>
   	  </link>
+    </model>
+
+      <model name="wall_3">
+      <pose>11 4 0 0 0 1.57</pose>
+      <static>true</static>
+      <link name="wall_3">
+        <collision name='collision_wall_1'>
+          <geometry>
+              <box>
+                  <size>16 0.2 10</size>
+              </box>
+          </geometry>
+        </collision>
+        <visual name='visual_wall_1'>
+          <geometry>
+              <box>
+                  <size>16 0.2 10</size>
+              </box>
+          </geometry>
+        <material>
+          <script>
+            <uri>file://media/materials/scripts/gazebo.material</uri>
+            <name>Gazebo/Black</name>
+          </script>
+        </material>
+        </visual>
+      </link>
     </model>
 
     
