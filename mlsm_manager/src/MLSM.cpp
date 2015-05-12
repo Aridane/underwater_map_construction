@@ -504,7 +504,7 @@ visualization_msgs::MarkerArray MLSM::getROSMarkers(string frameId) {
                 marker.pose.orientation.z = 0.0;
                 marker.pose.orientation.w = 1.0;
 
-                marker.lifetime = ros::Duration(20);
+                marker.lifetime = ros::Duration(5);
 
                 // Set the color -- be sure to set alpha to something non-zero!
                 marker.color.r = (float)(iterator->get()->depth_ / 0.5)/5.0;

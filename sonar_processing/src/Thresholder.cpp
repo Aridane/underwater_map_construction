@@ -26,19 +26,19 @@ void Thresholder::onInit()
     // Subscribe to incoming sonar data from driver
     cloudSubscriber_ = nh_.subscribe(cloudSubscribeTopic_.c_str(), 0, &Thresholder::cloudCallback, this);
     //Threhsolded cloud publisher
-    cloudPublisher_ = nh_.advertise<sensor_msgs::PointCloud2>(thresholdedCloudPublishTopic_.c_str(),1);
+    cloudPublisher_ = nh_.advertise<avora_msgs::StampedIntensityCloud>(thresholdedCloudPublishTopic_.c_str(),1);
 }
 
-void Thresholder::cloudCallback(sensor_msgs::PointCloud2Ptr cloudMessagePtr){
+void Thresholder::cloudCallback(avora_msgs::StampedIntensityCloudPtr cloudMessagePtr){
 
     //Cloud for thresholding
     intensityCloud::Ptr cloudPtr = boost::make_shared<intensityCloud>();
     //Conver message to intensityCloud
-    pcl::fromROSMsg(*cloudMessagePtr, *cloudPtr);
+    pcl::fromROSMsg(cloudMessagePtr->cloud, *cloudPtr);
     //Threshold cloud
     thresholdCloud(cloudPtr);
     //Publish cloud
-    publishCloud(cloudPtr);
+    publishCloud(cloudPtr, cloudMessagePtr->timeStamps);
 }
 
 void Thresholder::thresholdCloud(intensityCloud::Ptr cloudPtr)
@@ -110,17 +110,16 @@ double Thresholder::getOTSUThreshold(intensityCloud::Ptr cloudPtr){
                 threshold2 = i;
             max = between;
         }
-
     }
     threshold = (threshold1 + threshold2) / 2.0;
     return threshold;
 }
 
-void Thresholder::publishCloud(intensityCloud::Ptr cloudPtr){
-    sensor_msgs::PointCloud2 cloudMessage;
-    pcl::toROSMsg(*cloudPtr,cloudMessage);
-    cloudMessage.header.frame_id = cloudPtr->header.frame_id;
-    cloudPublisher_.publish(cloudMessage);
+void Thresholder::publishCloud(intensityCloud::Ptr cloudPtr, std::vector<double> timeStamps){
+    pcl::toROSMsg(*cloudPtr,stampedCloudMsg_.cloud);
+    stampedCloudMsg_.header.frame_id = cloudPtr->header.frame_id;
+    stampedCloudMsg_.timeStamps = timeStamps;
+    cloudPublisher_.publish(stampedCloudMsg_);
 }
 
 PLUGINLIB_DECLARE_CLASS(sonar_processing, Thresholder, sonar_processing::Thresholder, nodelet::Nodelet)

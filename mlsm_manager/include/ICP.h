@@ -8,6 +8,7 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
+#include <avora_msgs/StampedIntensityCloud.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <pcl/registration/transformation_estimation_svd.h>
 #include <pcl/registration/transformation_estimation_lm.h>
@@ -39,8 +40,8 @@ public:
 	~ICP();
 
     void setDebugPublisher(ros::Publisher *debugPublisher);
-    void applyTransformation(intensityCloud::Ptr P, Matrix4f R, Vector3d T, Vector3d Tv);
-    bool getTransformation(intensityCloud::Ptr P, MLSM *X, Vector3d eV, Vector3d eT, Matrix4f eR, Vector3d *Tv, Vector3d *T, Matrix4f *R);
+    void applyTransformation(intensityCloud::Ptr P, std::vector<double> timeStamps, Matrix4f R, Vector3d T, Vector3d Tv);
+    bool getTransformation(avora_msgs::StampedIntensityCloudPtr P0, MLSM *X, Vector3d eV, Vector3d eT, Matrix4f eR, Vector3d *Tv, Vector3d *T, Matrix4f *R);
     double registration(intensityCloud::Ptr P, std::vector<BlockInfo>* Y, Vector3d *Tv, Vector3d *T, Matrix4f *R);
 };
 

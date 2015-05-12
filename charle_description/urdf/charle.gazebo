@@ -65,10 +65,10 @@
  
   <!-- hokuyo -->
   <gazebo reference="sonarDato">
-    <sensor type="ray" name="head_hokuyo_sensor">
+    <sensor type="gpu_ray" name="head_hokuyo_sensor">
       <pose>0 0 0 0 0 0</pose>
       <visualize>false</visualize>
-      <update_rate>60</update_rate>
+      <update_rate>20</update_rate>
       <ray>
         <scan>
           <horizontal>
@@ -89,7 +89,8 @@
           <stddev>0.01</stddev>
         </noise>-->
       </ray>
-      <plugin name="gazebo_ros_head_hokuyo_controller" filename="libcharle_sonar_plugin.so">
+      <plugin name="gazebo_ros_head_hokuyo_controller" filename="libcharle_sonar_plugin.so">-->
+      <!--	<plugin name="gazebo_ros_head_hokuyo_controller" filename="libgazebo_ros_gpu_laser.so">-->
         <topicName>/charle/sonar</topicName>
         <frameName>sonarDato</frameName>
         <step>3</step>
@@ -98,6 +99,8 @@
       </plugin>
     </sensor>
   </gazebo>
+
+
 
   <gazebo reference="head">
     <sensor type="camera" name="camera1">

@@ -24,34 +24,38 @@ void SonarToCloud::onInit()
     nh_.param("scanFlagTopic",scanFlagTopic_,string("sonar/scan/flag"));
     nh_.param("laserCloudPublishTopic", laserCloudPublishTopic_, string("/sonar/scan/laserCloud"));
     nh_.param("targetFrame",targetFrame_,string("depth"));
-    nh_.param("heightLimit", heightLimit_, double(4.7));
-    nh_.param("velSubscribeTopic", velTopic_, string("/odom"));
+    nh_.param("heightLimit", heightLimit_, double(4.8));
+    nh_.param("velSubscribeTopic", velTopic_, string("/odom_combined"));
 
 
     // Subscribe to incoming sonar data from driver
     //beamSubscriber_ = nh_.subscribe(sonarSubscribeTopic_.c_str(), 0, &SonarToCloud::beamCallback, this);
-	scanLine_sub_.subscribe(nh_,sonarSubscribeTopic_.c_str(),10);
+    scanLine_sub_.subscribe(nh_,sonarSubscribeTopic_.c_str(),120);
     tf_filter_ = new tf::MessageFilter<avora_msgs::SonarScanLine>(scanLine_sub_, listener_, targetFrame_, 120);
-	tf_filter_->registerCallback( boost::bind(&SonarToCloud::beamCallback, this, _1) );
+    tf_filter_->registerCallback( boost::bind(&SonarToCloud::beamCallback, this, _1) );
     velSubscriber_ = nh_.subscribe(velTopic_.c_str(), 1, &SonarToCloud::velCallback, this);
     // Depending on the mode selected we subscribe advertise the topic needed
     // and initialise the corresponding variables
     if (mode_.find("LASER") != -1) laserInit();
     if (mode_.find("SONAR") != -1) sonarInit();
 
+    stampedCloudMsg_.timeStamps.resize(scanSize_);
+
     accumulatedTime_ = 0;
     startTime_ = 0;
+    time_ = 0;
+    oldStamp_ = 0;
 
 }
 
 void SonarToCloud::laserInit(){
-    laserCloudPublisher_ = nh_.advertise<sensor_msgs::PointCloud2>(laserCloudPublishTopic_.c_str(), 1);
+    laserCloudPublisher_ = nh_.advertise<sensor_msgs::PointCloud2>(laserCloudPublishTopic_.c_str(), 120);
     laserCloud_ = boost::make_shared<intensityCloud>();
     laserCloudNBeams_ = 0;
 }
 
 void SonarToCloud::sonarInit(){
-    sonarCloudPublisher_ = nh_.advertise<sensor_msgs::PointCloud2>(sonarCloudPublishTopic_.c_str(), 1);
+    sonarCloudPublisher_ = nh_.advertise<avora_msgs::StampedIntensityCloud>(sonarCloudPublishTopic_.c_str(), 120);
 
     sonarCloud_ = boost::make_shared<intensityCloud>();
     sonarCloudSize_ = 0;
@@ -66,23 +70,42 @@ void SonarToCloud::sonarInit(){
 }*/
 
 void SonarToCloud::velCallback(nav_msgs::Odometry msg){
+/*
+    if (lastTime_ == 0){
+        oldPose_.position = msg.pose.pose.position;
+        lastTime_ = ros::Time::now().toNSec();
+    }
+    else {
+        if ((fabs(msg.pose.pose.position.x - oldPose_.position.x) > 0.0001) || (fabs(msg.pose.pose.position.y - oldPose_.position.y) > 0.0001)){
+            //time_ = (ros::Time::now().toNSec() - lastTime_);
+            pose_.position.x = msg.pose.pose.position.x;
+            pose_.position.y = msg.pose.pose.position.y;
+            pose_.position.z = msg.pose.pose.position.z;
+        }
+//        oldPose_.position = msg.pose.pose.position;
 
+        //lastTime_ = ros::Time::now().toNSec();
+    }
+*/
     if (lastTime_ == 0){
         oldPose_.position = msg.pose.pose.position;
         lastTime_ = ros::Time::now().toSec();
     }
     else {
-        if ((fabs(msg.pose.pose.position.x - oldPose_.position.x) > 0.0001) || (fabs(msg.pose.pose.position.y - oldPose_.position.y) > 0.0001)){
-            time_ = (ros::Time::now().toSec() - lastTime_);
-            poseChange_.position.x = (msg.pose.pose.position.x - oldPose_.position.x)/time_;
-            poseChange_.position.y = (msg.pose.pose.position.y - oldPose_.position.y)/time_;
-            poseChange_.position.z = (msg.pose.pose.position.z - oldPose_.position.z)/time_;
+        poseChange_.position.x += (msg.pose.pose.position.x - oldPose_.position.x);
+        poseChange_.position.y += (msg.pose.pose.position.y - oldPose_.position.y);
+        poseChange_.position.z += (msg.pose.pose.position.z - oldPose_.position.z);
+        if ((fabs(msg.pose.pose.position.x - oldPose_.position.x) > 0.001) || (fabs(msg.pose.pose.position.y - oldPose_.position.y) > 0.001)){
+            time_ = time_ + (ros::Time::now().toSec() - lastTime_);
+            moving_ = true;
+        }
+        else {
+            moving_ = false;
         }
         oldPose_.position = msg.pose.pose.position;
 
         lastTime_ = ros::Time::now().toSec();
     }
-
 }
 
 bool SonarToCloud::newAngle(avora_msgs::SonarScanLineConstPtr scan, avora_msgs::SonarScanLineConstPtr oldScanLine){
@@ -178,7 +201,22 @@ void SonarToCloud::beamCallback(avora_msgs::SonarScanLineConstPtr scanLine){
         }
 
         double rangeResolution = (scanLine->range_resolution == 0) ? scanLine->maxrange_meters / scanLine->intensities.size() : scanLine->range_resolution;
+        double timeDiff = scanLine->header.stamp.toSec() - oldStamp_;
+        /*double xChange = (pose_.position.x - oldPose_.position.x) * timeDiff * time_;
+        double yChange = (pose_.position.y - oldPose_.position.y) * timeDiff * time_;
+        double zChange = (pose_.position.z - oldPose_.position.z) * timeDiff * time_;*/
+        double xChange = (poseChange_.position.x/time_);
+        double yChange = (poseChange_.position.y/time_);
+        double zChange = (poseChange_.position.z/time_);
 
+        oldPose_ = pose_;
+
+        //ROS_INFO("Change: x %f y %f z %f",xChange,yChange, zChange);
+        time_ = 1;
+        if (moving_) stampedCloudMsg_.timeStamps[sonarCloudNBeams_] = scanLine->header.stamp.toSec();
+        else {
+             stampedCloudMsg_.timeStamps[sonarCloudNBeams_] = 0;
+        }
         for (int i=0;i<scanLine->intensities.size();i++){
             geometryPoint.header = scanLine->header;
             geometryPoint.point.x = (i + 1) * rangeResolution * cos(scanLine->angle);
@@ -199,10 +237,15 @@ void SonarToCloud::beamCallback(avora_msgs::SonarScanLineConstPtr scanLine){
                   ROS_ERROR("%s",ex.what());
                   sonarCloud_->header.frame_id = scanLine->header.frame_id;
             }
+            /*ROS_INFO("Change: x %f y %f z %f",(poseChange_.position.x * (scanLine->header.stamp.toSec() - oldStamp_)),
+                                               (poseChange_.position.y * (scanLine->header.stamp.toSec() - oldStamp_))
+                                               ,(poseChange_.position.z * (scanLine->header.stamp.toSec() - oldStamp_)));
 
-            pclPoint.x = geometryPoint.point.x + (poseChange_.position.x * (scanLine->header.stamp.toSec() - oldStamp_.toSec()));
-            pclPoint.y = geometryPoint.point.y + (poseChange_.position.y * (scanLine->header.stamp.toSec() - oldStamp_.toSec()));
-            pclPoint.z = geometryPoint.point.z + (poseChange_.position.z * (scanLine->header.stamp.toSec() - oldStamp_.toSec()));
+            */
+
+            pclPoint.x = geometryPoint.point.x;// + xChange;
+            pclPoint.y = geometryPoint.point.y;// + yChange;// + (poseChange_.position.y * (scanLine->header.stamp.toSec() - oldStamp_));
+            pclPoint.z = geometryPoint.point.z;// + zChange;// + (poseChange_.position.z * (scanLine->header.stamp.toSec() - oldStamp_));
             pclPoint.intensity = scanLine->intensities[i];
             //if (moving_) pclPoint.data_c[3] = scanLine->header.stamp.toSec();
             //else pclPoint.data_c[3] = -scanLine->header.stamp.toSec();
@@ -215,24 +258,26 @@ void SonarToCloud::beamCallback(avora_msgs::SonarScanLineConstPtr scanLine){
         sonarCloudNBeams_++;
     }
     oldScanLine_ = boost::make_shared<avora_msgs::SonarScanLine>(*scanLine);
-    oldStamp_ = scanLine->header.stamp;
+    oldStamp_ = scanLine->header.stamp.toSec();
+
 }
 //Now that we have the sonar cloud in "sonarCloud" we convert it to a ROS message and publish it
 void SonarToCloud::publishSonarCloud(){
     //NODELET_INFO("Publish Sonar Cloud");
-    sensor_msgs::PointCloud2 cloudMessage;
-    pcl::toROSMsg(*sonarCloud_,cloudMessage);
-    cloudMessage.header.frame_id = sonarCloud_->header.frame_id;
-    cloudMessage.header.stamp = ros::Time::now();
-    sonarCloudPublisher_.publish(cloudMessage);
+    //sensor_msgs::PointCloud2 cloudMessage;
+    //pcl::toROSMsg(*sonarCloud_,cloudMessage);
+    pcl::toROSMsg(*sonarCloud_,stampedCloudMsg_.cloud);
+    stampedCloudMsg_.cloud.header.frame_id = sonarCloud_->header.frame_id;
+    stampedCloudMsg_.cloud.header.stamp = ros::Time::now();
+    sonarCloudPublisher_.publish(stampedCloudMsg_);
 }
 
 void SonarToCloud::publishLaserCloud(){
     sensor_msgs::PointCloud2 cloudMessage;
-    pcl::toROSMsg(*laserCloud_,cloudMessage);
-    cloudMessage.header.frame_id = laserCloud_->header.frame_id;
-    cloudMessage.header.stamp = ros::Time::now();
-    laserCloudPublisher_.publish(cloudMessage);
+    pcl::toROSMsg(*laserCloud_,stampedCloudMsg_.cloud);
+    stampedCloudMsg_.header.frame_id = laserCloud_->header.frame_id;
+    stampedCloudMsg_.header.stamp = ros::Time::now();
+    laserCloudPublisher_.publish(stampedCloudMsg_);
 }
 
 PLUGINLIB_DECLARE_CLASS(sonar_processing, SonarToCloud, sonar_processing::SonarToCloud, nodelet::Nodelet)

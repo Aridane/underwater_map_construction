@@ -14,6 +14,7 @@
 * limitations under the License.
 *
 */
+
 #ifndef CHARLE_SONAR_PLUGIN_HH
 #define CHARLE_SONAR_PLUGIN_HH
 
@@ -26,7 +27,6 @@
 #include <ros/advertise_options.h>
 #include <sensor_msgs/LaserScan.h>
 
-#include <sdf/Param.hh>
 #include <gazebo/physics/physics.hh>
 #include <gazebo/transport/TransportTypes.hh>
 #include <gazebo/msgs/MessageTypes.hh>
@@ -34,8 +34,9 @@
 #include <gazebo/common/Plugin.hh>
 #include <gazebo/common/Events.hh>
 #include <gazebo/sensors/SensorTypes.hh>
-#include <gazebo/plugins/RayPlugin.hh>
-#include <gazebo_plugins/gazebo_ros_utils.h>
+#include <gazebo/plugins/GpuRayPlugin.hh>
+
+#include <sdf/sdf.hh>
 
 #include <gazebo_plugins/PubQueue.h>
 
@@ -43,7 +44,7 @@
 
 namespace gazebo
 {
-class CharleSonarPlugin : public RayPlugin
+class CharleSonarPlugin : public GpuRayPlugin
 {
     /// \brief Constructor
 public: CharleSonarPlugin();
@@ -63,7 +64,7 @@ public: ~CharleSonarPlugin();
     private: std::string world_name_;
     private: physics::WorldPtr world_;
     /// \brief The parent sensor
-    private: sensors::RaySensorPtr parent_ray_sensor_;
+    private: sensors::GpuRaySensorPtr parent_ray_sensor_;
 
     /// \brief pointer to ros node
     private: ros::NodeHandle* rosnode_;

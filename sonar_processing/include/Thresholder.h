@@ -11,7 +11,7 @@
 #include <pcl/filters/passthrough.h>
 #include <string>
 #include <TypeDefinitions.h>
-
+#include <avora_msgs/StampedIntensityCloud.h>
 
 namespace sonar_processing
 {
@@ -32,6 +32,8 @@ namespace sonar_processing
 
         int maxBinValue_;
 
+        avora_msgs::StampedIntensityCloud stampedCloudMsg_;
+
         //Publishers and subscribers
         ros::Subscriber cloudSubscriber_;
         ros::Publisher cloudPublisher_;
@@ -47,9 +49,9 @@ namespace sonar_processing
         Thresholder();
         ~Thresholder();
 
-        void cloudCallback(sensor_msgs::PointCloud2Ptr cloudMessagePtr);
+        void cloudCallback(avora_msgs::StampedIntensityCloudPtr cloudMessagePtr);
         void thresholdCloud(intensityCloud::Ptr cloudPtr);
         double getOTSUThreshold(intensityCloud::Ptr cloudPtr);
-        void publishCloud(intensityCloud::Ptr cloudPtr);
+        void publishCloud(intensityCloud::Ptr cloudPtr,  std::vector<double> timeStamps);
     };
 };

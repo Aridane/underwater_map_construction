@@ -78,12 +78,17 @@ void MLSMCore::velCallback(nav_msgs::Odometry msg){
 
         lastTime_ = ros::Time::now().toSec();
     }
+    velSamples_++;
 
 }
 
-int MLSMCore::addPointCloudToMap(intensityCloud::Ptr cloud){
+int MLSMCore::addPointCloudToMap(avora_msgs::StampedIntensityCloudPtr cloudMsg){
     ROS_DEBUG("Adding point cloud");
-    cloudFrame_ = cloud->header.frame_id;
+    intensityCloud cloud;
+    intensityCloud::Ptr cloudPtr;
+    pcl::fromROSMsg(cloudMsg->cloud,cloud);
+
+    cloudFrame_ = cloudMsg->header.frame_id;
     Vector3d eV, eT, V, T;
     Matrix4f eR = Matrix<float, 4, 4>::Identity(), R = Matrix<float, 4, 4>::Identity();
     eT[0] = 0;
@@ -92,7 +97,7 @@ int MLSMCore::addPointCloudToMap(intensityCloud::Ptr cloud){
     eV[0] = 0;
     eV[1] = 0;
     eV[2] = 0;
-
+    //ROS_INFO("Cloud Received Height = %d Width = %d", cloud->height, cloud->width);
     if (matching_){
         ROS_INFO("TimeChange %f",time_);
 
@@ -105,14 +110,14 @@ int MLSMCore::addPointCloudToMap(intensityCloud::Ptr cloud){
         eV[2] = 0;//(time_ != 0) ? poseChange_.position.z/time_ : time_;
         ROS_INFO("Estimated vel x=%.3f y=%.3f z=%.3f",eV[0],eV[1],eV[2]);
 
-        ICPSolver_.getTransformation(cloud,&map_,eV, eT, eR, &V, &T, &R);
+        ICPSolver_.getTransformation(cloudMsg,&map_,eV, eT, eR, &V, &T, &R);
 
         R(0,3) = T[0];
         R(1,3) = T[1];
         R(2,3) = T[2];
-        pcl::transformPointCloud(*cloud,*cloud,R);
-
-        map_.addPointCloud(cloud);
+        pcl::transformPointCloud(cloud,cloud,R);
+        cloudPtr = boost::make_shared<intensityCloud>(cloud);
+        map_.addPointCloud(cloudPtr);
 
 
         meanVelocity_.angular.x = 0;
@@ -124,13 +129,14 @@ int MLSMCore::addPointCloudToMap(intensityCloud::Ptr cloud){
         velSamples_ = 0;
     }
     else{
-        map_.addPointCloud(cloud);
+        cloudPtr = boost::make_shared<intensityCloud>(cloud);
+        map_.addPointCloud(cloudPtr);
     }
 	//TODO Publish map
 	//Publish markers provisionally for debugging
 	//TODO publish markers on service demand
 	//TODO Remove old markers??
-    markers = map_.getROSMarkers(cloudFrame_);
+    markers = map_.getROSMarkers("odom");
     markerPublisher_.publish(markers);
 	return 0;
 }
@@ -142,10 +148,10 @@ void MLSMCore::orientationCallback(const geometry_msgs::QuaternionPtr orientatio
     tf::quaternionMsgToTF(*orientationMsg,lastOrientation_);
 }
 
-void MLSMCore::cloudCallback(sensor_msgs::PointCloud2 cloudMsg){
-    intensityCloud::Ptr cloud = boost::shared_ptr<intensityCloud>(new intensityCloud);
-    pcl::fromROSMsg(cloudMsg,*cloud);
-    addPointCloudToMap(cloud);
+void MLSMCore::cloudCallback(avora_msgs::StampedIntensityCloudPtr cloudMsg){
+    //intensityCloud::Ptr cloud = boost::shared_ptr<intensityCloud>(new intensityCloud);
+    //pcl::fromROSMsg(cloudMsg,*cloud);
+    addPointCloudToMap(cloudMsg);
 }
 
 int main(int argc, char** argv){

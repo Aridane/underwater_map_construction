@@ -218,14 +218,14 @@ std::vector<BlockInfo> closestPoints(intensityCloud::Ptr P, MLSM *X, Vector3d eV
     return result;*/
 }
 
-void ICP::applyTransformation(intensityCloud::Ptr P, Matrix4f R, Vector3d T, Vector3d Tv){
+void ICP::applyTransformation(intensityCloud::Ptr P, std::vector<double> timeStamps, Matrix4f R, Vector3d T, Vector3d Tv){
     intensityCloud::iterator cloudIterator = P->begin();
     //R(0,3) = T[0];
     //R(1,3) = T[1];
     //R(2,3) = T[2];
     //pcl::transformPointCloud(*P,*P,R);
 
-    if ((Tv[0] = 0) && (Tv[1] = 0) && (Tv[2] = 0)){
+    if (((Tv[0] = 0) && (Tv[1] = 0) && (Tv[2] = 0)) || (timeStamps.size() != P->size())){
         R(0,3) = T[0];
         R(1,3) = T[1];
         R(2,3) = T[2];
@@ -237,16 +237,18 @@ void ICP::applyTransformation(intensityCloud::Ptr P, Matrix4f R, Vector3d T, Vec
 
         long int movingTime = 0;
         Vector3d transformation;
-        for (;cloudIterator != P->end();cloudIterator++){
-            if (isnan(cloudIterator->x) || isnan(cloudIterator->y) || isnan(cloudIterator->z)) continue;
-             // Possitive stamp means movement. Accumulate translation time
-            if (cloudIterator->data_c[3] > 0) movingTime = lastStamp - cloudIterator->data_c[3];
-            transformation = Tv * movingTime;
-            // Rotation? (Assuming only linear movement, orientation known
-            cloudIterator->x = cloudIterator->x - transformation[0] + T[0];
-            cloudIterator->y = cloudIterator->y - transformation[1] + T[1];
-            cloudIterator->z = cloudIterator->z - transformation[2] + T[2];
-            //prevStamp = fabs(cloudIterator->data_c[3]);
+        for(int i=0;i<P->height;i++){
+            for (int j=0;j<P->width;j++){
+                if (isnan(P->at(i,j).x) || isnan(P->at(i,j).y) || isnan(P->at(i,j).z)) continue;
+                 // Possitive stamp means movement. Accumulate translation time
+                if (timeStamps[i] == 0) movingTime = lastStamp - timeStamps[i];
+                transformation = Tv * movingTime;
+                // Rotation? (Assuming only linear movement, orientation known
+                P->at(i,j).x = P->at(i,j).x - transformation[0] + T[0];
+                P->at(i,j).y = P->at(i,j).y - transformation[1] + T[1];
+                P->at(i,j).z = P->at(i,j).z - transformation[2] + T[2];
+                //prevStamp = fabs(cloudIterator->data_c[3]);
+            }
         }
     }
 }
@@ -393,13 +395,16 @@ double calculateError(intensityCloud::Ptr P, std::vector<BlockInfo>* Y){
     return error;
 }
 
-bool ICP::getTransformation(intensityCloud::Ptr P0, MLSM *X, Vector3d eV, Vector3d eT, Matrix4f eR, Vector3d *Tv, Vector3d *T, Matrix4f *R){
+bool ICP::getTransformation(avora_msgs::StampedIntensityCloudPtr P0, MLSM *X, Vector3d eV, Vector3d eT, Matrix4f eR, Vector3d *Tv, Vector3d *T, Matrix4f *R){
     double error = DBL_MAX;
     unsigned int iterations = 0;
     std::vector<BlockInfo> Y;
-    intensityCloud::Ptr P = boost::shared_ptr<intensityCloud>(P0);
+    intensityCloud cloud, cloud0;
+    pcl::fromROSMsg(P0->cloud,cloud);
+    pcl::fromROSMsg(P0->cloud,cloud0);
+    intensityCloud::Ptr P = boost::make_shared<intensityCloud>(cloud);
     // Initial transform
-    //ROS_INFO("Applying initial transformation");
+    ROS_INFO("Applying initial transformation");
     Vector3d accumulatedT;
     Matrix4f accumulatedR = Matrix<float, 4, 4>::Identity();
     accumulatedT[0] = 0;
@@ -408,10 +413,11 @@ bool ICP::getTransformation(intensityCloud::Ptr P0, MLSM *X, Vector3d eV, Vector
     (*Tv)[0] = 0;
     (*Tv)[1] = 0;
     (*Tv)[2] = 0;
-    applyTransformation(P, eR, eT, eV);
+    applyTransformation(P, P0->timeStamps, eR, eT, eV);
+    ROS_INFO("Initial transformation applied");
     intensityCloud sum;
     sensor_msgs::PointCloud2 debugCloud;
-    sum = *P0 + *P;
+    sum = cloud0 + *P;
     pcl::toROSMsg(sum,debugCloud);
     debugCloud.header.frame_id = P->header.frame_id;
     debugPublisher_->publish(debugCloud);
@@ -426,7 +432,7 @@ bool ICP::getTransformation(intensityCloud::Ptr P0, MLSM *X, Vector3d eV, Vector
 
         // Iterate through P applying the correct transformation depending on Tv and the stamp
         //ROS_INFO("Applying transformation");
-        applyTransformation(P, *R, *T, *Tv);
+        applyTransformation(P,P0->timeStamps, *R, *T, *Tv);
         // Calculate error
         //ROS_INFO("Calculate error");
         error = calculateError(P, &Y);

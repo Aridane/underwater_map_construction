@@ -269,7 +269,7 @@ target_link_libraries(gazebo_ros_ft_sensor ${GAZEBO_LIBRARIES} ${catkin_LIBRARIE
 ##
 add_library(charle_sonar_plugin src/charle_sonar_plugin.cpp)
 add_dependencies(charle_sonar_plugin avora_msgs_generate_messages_cpp)
-target_link_libraries(charle_sonar_plugin ${GAZEBO_LIBRARIES} RayPlugin ${catkin_LIBRARIES})
+target_link_libraries(charle_sonar_plugin ${GAZEBO_LIBRARIES} GpuRayPlugin ${catkin_LIBRARIES})
 
 ## Template
 add_library(gazebo_ros_template src/gazebo_ros_template.cpp)

@@ -23,6 +23,7 @@
 #include <tf/message_filter.h>
 #include <message_filters/subscriber.h>
 
+#include <avora_msgs/StampedIntensityCloud.h>
 
 
 #include <TypeDefinitions.h>
@@ -46,6 +47,7 @@ namespace sonar_processing
         int laserCloudNBeams_;
 		int scanSize_;
 
+        avora_msgs::StampedIntensityCloud stampedCloudMsg_;
 		vector<double> scanAngles;
 		intensityCloud::iterator cloudIterator_;
         avora_msgs::SonarScanLineConstPtr oldScanLine_;
@@ -79,9 +81,10 @@ namespace sonar_processing
         double heightLimit_;
         geometry_msgs::Pose poseChange_;
         geometry_msgs::Pose oldPose_;
+        geometry_msgs::Pose pose_;
         double lastTime_;
         double time_;
-        ros::Time oldStamp_;
+        double oldStamp_;
 
 	public:
 		virtual void onInit();

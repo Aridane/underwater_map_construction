@@ -77,10 +77,11 @@ public:
 	MLSMCore(ros::NodeHandle* n);
 	~MLSMCore();
 
-    int addPointCloudToMap(intensityCloud::Ptr cloud);
+    int addPointCloudToMap(avora_msgs::StampedIntensityCloudPtr cloudMsg);
+
 
 	void publishMapMarkers();
-	void cloudCallback(sensor_msgs::PointCloud2 cloudMsg);
+    void cloudCallback(avora_msgs::StampedIntensityCloudPtr cloudMsg);
     void orientationCallback(const geometry_msgs::QuaternionPtr orientationMsg);
     void lastKnownPoseCallback(const geometry_msgs::PointPtr pointMsg);
     void matchingCallback(const std_msgs::Bool msg);

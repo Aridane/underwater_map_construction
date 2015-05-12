@@ -24,18 +24,21 @@ Date: 29 March 2012
 #include <string>
 #include <assert.h>
 
+#include <sdf/sdf.hh>
+
 #include <gazebo/physics/World.hh>
 #include <gazebo/physics/HingeJoint.hh>
 #include <gazebo/sensors/Sensor.hh>
-#include <sdf/sdf.hh>
-#include <sdf/Param.hh>
 #include <gazebo/common/Exception.hh>
-#include <gazebo/sensors/RaySensor.hh>
+#include <gazebo/sensors/GpuRaySensor.hh>
 #include <gazebo/sensors/SensorTypes.hh>
 #include <gazebo/transport/transport.hh>
 
+
 #include <tf/tf.h>
 #include <tf/transform_listener.h>
+
+#include <gazebo_plugins/gazebo_ros_utils.h>
 
 #include <gazebo_plugins/charle_sonar_plugin.h>
 
@@ -62,8 +65,8 @@ CharleSonarPlugin::~CharleSonarPlugin()
 // Load the controller
 void CharleSonarPlugin::Load(sensors::SensorPtr _parent, sdf::ElementPtr _sdf)
 {
-  // load plugin
-  RayPlugin::Load(_parent, this->sdf);
+   // load plugin
+  GpuRayPlugin::Load(_parent, this->sdf);
   // Get the world name.
   std::string worldName = _parent->GetWorldName();
   this->world_ = physics::get_world(worldName);
@@ -71,7 +74,7 @@ void CharleSonarPlugin::Load(sensors::SensorPtr _parent, sdf::ElementPtr _sdf)
   this->sdf = _sdf;
 
   this->parent_ray_sensor_ =
-    boost::dynamic_pointer_cast<sensors::RaySensor>(_parent);
+    boost::dynamic_pointer_cast<sensors::GpuRaySensor>(_parent);
 
   if (!this->parent_ray_sensor_)
     gzthrow("CharleSonarPlugin controller requires a Ray Sensor as its parent");
@@ -161,7 +164,7 @@ void CharleSonarPlugin::LoadThread()
   {
     ros::AdvertiseOptions ao =
       ros::AdvertiseOptions::create<avora_msgs::SonarScanLine>(
-      this->topic_name_, 120,
+      this->topic_name_, 1,
       boost::bind(&CharleSonarPlugin::LaserConnect, this),
       boost::bind(&CharleSonarPlugin::LaserDisconnect, this),
       ros::VoidPtr(), NULL);
