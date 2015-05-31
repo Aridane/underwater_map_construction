@@ -51,6 +51,7 @@ public:
     int getSpanY();
     int addPointCloud(intensityCloud::Ptr cloud);
     visualization_msgs::MarkerArray getROSMarkers(string frameId);
+    sensor_msgs::PointCloud2 getROSCloud(string frameId);
     double getResolution();
     bool checkCell(int i, int j);
     Block* findSuitableBlock(int i, int j, pcl::PointXYZI point);

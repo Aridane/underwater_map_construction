@@ -80,7 +80,6 @@ Block* MLSM::findClosestBlock(pcl::PointXYZI point){
     //if (cellP != NULL) ROS_INFO("NOT NULL CELL");
     //else ROS_INFO("NULL CELL");
     // Find suitable block in cell
-
     blockPtr = findSuitableBlock(round(pos[0]),round(pos[1]),point);
     //ROS_INFO("Suitable block found?");
     return blockPtr;
@@ -462,6 +461,39 @@ int MLSM::addPointCloud(intensityCloud::Ptr cloud) {
     return 0;
 }
 
+sensor_msgs::PointCloud2 MLSM::getROSCloud(string frameId){
+    intensityCloud pclCloud;
+    sensor_msgs::PointCloud2 result;
+
+    cell::const_iterator iterator, end;
+    cell* cellP = NULL;
+
+    for (int i=-spanX_+1;i<spanX_;i++) {
+        for (int j=-spanY_+1;j<spanY_;j++){
+            if((cellP = (*grid_)(i,j)) == NULL) continue;
+
+            for (iterator = cellP->begin(), end = cellP->end(); iterator != end; ++iterator){
+                pcl::PointXYZI p;
+                // Mean
+                p.x = iterator->get()->mean_.x;
+                p.y = iterator->get()->mean_.y;
+                p.z = iterator->get()->mean_.z;
+                p.intensity = iterator->get()->mean_.intensity;
+
+                pclCloud.push_back(p);
+                // Height
+                p.z = iterator->get()->height_;
+                pclCloud.push_back(p);
+                // Depth
+                p.z -= iterator->get()->depth_;
+                pclCloud.push_back(p);
+            }
+        }
+    }
+    pcl::toROSMsg(pclCloud,result);
+    result.header.frame_id = frameId;
+    return result;
+}
 
 
 visualization_msgs::MarkerArray MLSM::getROSMarkers(string frameId) {
@@ -504,11 +536,11 @@ visualization_msgs::MarkerArray MLSM::getROSMarkers(string frameId) {
                 marker.pose.orientation.z = 0.0;
                 marker.pose.orientation.w = 1.0;
 
-                marker.lifetime = ros::Duration(5);
+                marker.lifetime = ros::Duration(20);
 
                 // Set the color -- be sure to set alpha to something non-zero!
                 marker.color.r = (float)(iterator->get()->depth_ / 0.5)/5.0;
-                marker.color.g = 0.0f;
+                marker.color.g = 1;
                 marker.color.b = 0.0f;
                 marker.color.a = 0.5;
 

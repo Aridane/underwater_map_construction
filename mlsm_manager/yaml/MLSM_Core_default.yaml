@@ -1,6 +1,9 @@
 cloudSubscribeTopic: '/sonar/scan/thresholded'
 markerPublishTopic: '/MLSM/Markers'
 resolution: 0.3
-sizeXMeters: 60
-sizeYMeters: 60
+sizeXMeters: 120
+sizeYMeters: 120
 fastUpdate: false
+maxIterations: 1000
+errorThreshold: 0.25
+speedError: -0.3

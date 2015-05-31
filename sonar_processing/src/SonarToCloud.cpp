@@ -39,7 +39,7 @@ void SonarToCloud::onInit()
     if (mode_.find("LASER") != -1) laserInit();
     if (mode_.find("SONAR") != -1) sonarInit();
 
-    stampedCloudMsg_.timeStamps.resize(scanSize_);
+    //stampedCloudMsg_.timeStamps.resize(scanSize_);
 
     accumulatedTime_ = 0;
     startTime_ = 0;
@@ -186,6 +186,7 @@ void SonarToCloud::beamCallback(avora_msgs::SonarScanLineConstPtr scanLine){
             sonarCloud_ ->width = oldScanLine_->intensities.size();
             sonarCloud_->resize(sonarCloud_->height*sonarCloud_ ->width);
             publishSonarCloud();
+            stampedCloudMsg_.timeStamps.clear();
             // If we are in continuous mode we just delete the oldest beam of the cloud and insert the new one
             if ((mode_.find("CONT") != -1) && !(newAngle(scanLine, oldScanLine_))){
                 sonarCloud_->erase(sonarCloud_->begin(),sonarCloud_->begin()+sonarCloud_->width);
@@ -213,11 +214,12 @@ void SonarToCloud::beamCallback(avora_msgs::SonarScanLineConstPtr scanLine){
 
         //ROS_INFO("Change: x %f y %f z %f",xChange,yChange, zChange);
         time_ = 1;
-        if (moving_) stampedCloudMsg_.timeStamps[sonarCloudNBeams_] = scanLine->header.stamp.toSec();
-        else {
-             stampedCloudMsg_.timeStamps[sonarCloudNBeams_] = 0;
-        }
+
         for (int i=0;i<scanLine->intensities.size();i++){
+            if (moving_) stampedCloudMsg_.timeStamps.push_back(scanLine->header.stamp.toSec());
+            else {
+                 stampedCloudMsg_.timeStamps.push_back(0);
+            }
             geometryPoint.header = scanLine->header;
             geometryPoint.point.x = (i + 1) * rangeResolution * cos(scanLine->angle);
             geometryPoint.point.y = (i + 1) * rangeResolution * sin(scanLine->angle);

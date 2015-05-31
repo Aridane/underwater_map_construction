@@ -50,7 +50,7 @@ namespace sonar_processing
         ~Thresholder();
 
         void cloudCallback(avora_msgs::StampedIntensityCloudPtr cloudMessagePtr);
-        void thresholdCloud(intensityCloud::Ptr cloudPtr);
+        pcl::IndicesConstPtr thresholdCloud(intensityCloud::Ptr cloudPtr);
         double getOTSUThreshold(intensityCloud::Ptr cloudPtr);
         void publishCloud(intensityCloud::Ptr cloudPtr,  std::vector<double> timeStamps);
     };

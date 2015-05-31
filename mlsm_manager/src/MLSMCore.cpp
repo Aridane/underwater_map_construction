@@ -1,7 +1,7 @@
 #include "MLSMCore.h"
 using namespace mlsm;
 MLSMCore::MLSMCore(ros::NodeHandle* n):
-    ICPSolver_(1000,0.15)
+    ICPSolver_(1,0.15)
     {
 	ros::NodeHandle nh("~");
     nh.param("cloudSubscribeTopic", cloudSubscribeTopic_, string("/sonar/scan/thresholded"));
@@ -14,8 +14,16 @@ MLSMCore::MLSMCore(ros::NodeHandle* n):
 	nh.param("sizeXMeters", sizeXMeters_, double(60));
 	nh.param("sizeYMeters", sizeYMeters_, double(60));
     nh.param("fastUpdate", fastUpdate_, bool("false"));
+    nh.param("speedError", speedError_, double(0));
 
     nh.param("verticalElasticity", verticalElasticity_, double(0));
+    int maxIterations;
+    double errorThreshold;
+
+    nh.param("maxIterations", maxIterations, int(1000));
+    nh.param("errorThreshold", errorThreshold, double(0.3));
+
+
     ROS_DEBUG("Initializing map");
 
     matching_ = false;
@@ -26,7 +34,16 @@ MLSMCore::MLSMCore(ros::NodeHandle* n):
     matchingSubscriber_ = n->subscribe("startMatching", 0, &MLSMCore::matchingCallback, this);
     velSubscriber_ = n->subscribe(velTopic_.c_str(), 1, &MLSMCore::velCallback, this);
     debugPublisher_ = n->advertise<sensor_msgs::PointCloud2>("debug_cloud",0);
+    mapPublisher_ = n->advertise<sensor_msgs::PointCloud2>("/map/cloud",0);
+
+
     ICPSolver_.setDebugPublisher(&debugPublisher_);
+    ICPSolver_.setErrorThreshold(errorThreshold);
+    ICPSolver_.setMaxIterations(maxIterations);
+    ICPSolver_.setWidth(3);
+    ICPSolver_.setNSamples(5);
+    ICPSolver_.setSampleStep(0.15);
+
     lastPosition_[0] = 0;
     lastPosition_[1] = 0;
     lastPosition_[2] = 0;
@@ -90,13 +107,11 @@ int MLSMCore::addPointCloudToMap(avora_msgs::StampedIntensityCloudPtr cloudMsg){
 
     cloudFrame_ = cloudMsg->header.frame_id;
     Vector3d eV, eT, V, T;
-    Matrix4f eR = Matrix<float, 4, 4>::Identity(), R = Matrix<float, 4, 4>::Identity();
+    Eigen::Matrix4f eR = Matrix<float, 4, 4>::Identity(), R = Matrix<float, 4, 4>::Identity();
     eT[0] = 0;
     eT[1] = 0;
     eT[2] = 0;
-    eV[0] = 0;
-    eV[1] = 0;
-    eV[2] = 0;
+    eV = V = T = eT;
     //ROS_INFO("Cloud Received Height = %d Width = %d", cloud->height, cloud->width);
     if (matching_){
         ROS_INFO("TimeChange %f",time_);
@@ -105,12 +120,41 @@ int MLSMCore::addPointCloudToMap(avora_msgs::StampedIntensityCloudPtr cloudMsg){
         ROS_INFO("Derived vel x=%.3f y=%.3f z=%.3f",poseChange_.position.x/time_,poseChange_.position.y/time_,poseChange_.position.z/time_);
 
 
-        eV[0] = 0;//(time_ != 0) ? poseChange_.position.x/time_ : time_;
-        eV[1] = 0;//(time_ != 0) ? poseChange_.position.y/time_ : time_;
-        eV[2] = 0;//(time_ != 0) ? poseChange_.position.z/time_ : time_;
+        eV[0] = (time_ != 0) ? poseChange_.position.x/time_ : time_;
+        eV[1] = (time_ != 0) ? poseChange_.position.y/time_ : time_;
+        eV[2] = (time_ != 0) ? poseChange_.position.z/time_ : time_;
+        eV[0] = eV[0] + eV[0]*speedError_;
+        eV[1] = eV[1] + eV[1]*speedError_;
+        eV[2] = eV[2] + eV[2]*speedError_;
         ROS_INFO("Estimated vel x=%.3f y=%.3f z=%.3f",eV[0],eV[1],eV[2]);
 
         ICPSolver_.getTransformation(cloudMsg,&map_,eV, eT, eR, &V, &T, &R);
+
+        /*Matrix3f r3;
+        for (int i=0;i<3;i++){
+            for (int j=0;j<3;j++){
+                r3(i,j) = R(i,j);
+            }
+        }
+
+        Quaternionf eQ(r3);
+
+        tf::Quaternion qt;
+
+        qt.setX(eQ.x());
+        qt.setY(eQ.y());
+        qt.setZ(eQ.z());
+        qt.setW(eQ.w());
+
+        tf::Vector3 vt2(T[0], T[1], T[2]);
+
+        tf::Transform map_to_odom(qt, vt2);
+        ros::Time current_time = ros::Time::now();
+
+        br_.sendTransform(tf::StampedTransform(map_to_odom,
+                                                current_time,
+                                                "map",
+                                                "odom"));*/
 
         R(0,3) = T[0];
         R(1,3) = T[1];
@@ -136,9 +180,11 @@ int MLSMCore::addPointCloudToMap(avora_msgs::StampedIntensityCloudPtr cloudMsg){
 	//Publish markers provisionally for debugging
 	//TODO publish markers on service demand
 	//TODO Remove old markers??
-    markers = map_.getROSMarkers("odom");
-    markerPublisher_.publish(markers);
-	return 0;
+    //markers = map_.getROSMarkers("map");
+    //markerPublisher_.publish(markers);
+    sensor_msgs::PointCloud2 msgcloud = map_.getROSCloud("map");
+    mapPublisher_.publish(msgcloud);
+    return 0;
 }
 void MLSMCore::lastKnownPoseCallback(const geometry_msgs::PointPtr pointMsg){
     tf::pointMsgToTF(*pointMsg,lastPosition_);

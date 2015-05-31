@@ -33,7 +33,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: PointCloud2
+    SyncSource: ""
 Visualization Manager:
   Class: ""
   Displays:
@@ -206,7 +206,7 @@ Visualization Manager:
       Size (Pixels): 1
       Size (m): 0.3
       Style: Points
-      Topic: /sonar/scan/thresholded
+      Topic: /sonar/scan/thresholded/cloud
       Use Fixed Frame: true
       Use rainbow: false
       Value: true
@@ -215,7 +215,7 @@ Visualization Manager:
       Marker Topic: /MLSM/Markers
       Name: MarkerArray
       Namespaces:
-        basic_shapes: true
+        {}
       Queue Size: 100
       Value: true
     - Alpha: 1
@@ -304,5 +304,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 864
-  X: 21
-  Y: 34
+  X: 0
+  Y: 0

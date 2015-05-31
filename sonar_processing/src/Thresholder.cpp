@@ -36,15 +36,33 @@ void Thresholder::cloudCallback(avora_msgs::StampedIntensityCloudPtr cloudMessag
     //Conver message to intensityCloud
     pcl::fromROSMsg(cloudMessagePtr->cloud, *cloudPtr);
     //Threshold cloud
-    thresholdCloud(cloudPtr);
+    pcl::IndicesConstPtr extractedIndices = thresholdCloud(cloudPtr);
+
+    std::vector<double> stamps;// = cloudMessagePtr->timeStamps;
+    int j = 0;
+    for (int i=0;i<cloudMessagePtr->timeStamps.size();i++){
+        if (i == extractedIndices->at(j)){
+            j++;
+            continue;
+        }
+        stamps.push_back(cloudMessagePtr->timeStamps.at(i));
+    }
+
+    ROS_INFO("I %lu ",extractedIndices->size());
+    ROS_INFO("C %lu ",cloudPtr->size());
+    ROS_INFO("C %lu ",cloudPtr->height);
+    ROS_INFO("C %lu ",cloudPtr->width);
+
+    ROS_INFO("S %lu ",stamps.size());
+    //}
     //Publish cloud
-    publishCloud(cloudPtr, cloudMessagePtr->timeStamps);
+    publishCloud(cloudPtr, stamps);
 }
 
-void Thresholder::thresholdCloud(intensityCloud::Ptr cloudPtr)
+pcl::IndicesConstPtr Thresholder::thresholdCloud(intensityCloud::Ptr cloudPtr)
 {
     double threshold = 0;
-    pcl::PassThrough<pcl::PointXYZI> passthroughFilter;
+    pcl::PassThrough<pcl::PointXYZI> passthroughFilter(true);
 
     if (mode_.find("OTSU") != -1){
         threshold = getOTSUThreshold(cloudPtr);
@@ -70,9 +88,22 @@ void Thresholder::thresholdCloud(intensityCloud::Ptr cloudPtr)
     // Set range of intensity values accepted
     passthroughFilter.setFilterLimits(threshold, maxBinValue_+1);
     // Keep organised setting removed points to NaN
-    passthroughFilter.setKeepOrganized(true);
+    passthroughFilter.setKeepOrganized(false);
     // Apply filter
     passthroughFilter.filter(*cloudPtr);
+
+    pcl::IndicesConstPtr indices = passthroughFilter.getIndices();
+    pcl::IndicesConstPtr extractedIndices = passthroughFilter.getRemovedIndices();
+
+
+    ROS_INFO("I %lu ",indices->size());
+    ROS_INFO("E %lu ",extractedIndices->size());
+
+
+
+    return extractedIndices;
+
+
 }
 
 double Thresholder::getOTSUThreshold(intensityCloud::Ptr cloudPtr){

@@ -32,6 +32,9 @@ class ICP {
 private:
 	int maxIterations_;
     double errorThreshold_;
+    double width_;
+    int nSamples_;
+    double sampleStep_;
     ros::Publisher* debugPublisher_;
 public:
 	ICP();
@@ -40,7 +43,13 @@ public:
 	~ICP();
 
     void setDebugPublisher(ros::Publisher *debugPublisher);
-    void applyTransformation(intensityCloud::Ptr P, std::vector<double> timeStamps, Matrix4f R, Vector3d T, Vector3d Tv);
+    void setMaxIterations(int maxIterations);
+    void setErrorThreshold(double errorThreshold);
+    void setWidth(double width);
+    void setNSamples(int nSamples);
+    void setSampleStep(double sampleStep);
+    std::vector<Vector3d> applyTransformation(intensityCloud::Ptr P, std::vector<double> timeStamps, Matrix4f R, Vector3d V, Vector3d T);
+    std::vector<BlockInfo> closestPoints(intensityCloud::Ptr P, MLSM *X,std::vector<Vector3d> transforms, Vector3d eV);
     bool getTransformation(avora_msgs::StampedIntensityCloudPtr P0, MLSM *X, Vector3d eV, Vector3d eT, Matrix4f eR, Vector3d *Tv, Vector3d *T, Matrix4f *R);
     double registration(intensityCloud::Ptr P, std::vector<BlockInfo>* Y, Vector3d *Tv, Vector3d *T, Matrix4f *R);
 };

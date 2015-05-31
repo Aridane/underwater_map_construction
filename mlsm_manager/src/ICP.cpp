@@ -23,50 +23,87 @@ void ICP::setDebugPublisher(ros::Publisher* debugPublisher){
     debugPublisher_ = debugPublisher;
 }
 
+void ICP::setErrorThreshold(double errorThreshold){
+    errorThreshold_ = errorThreshold;
+}
+
+void ICP::setMaxIterations(int maxIterations){
+    maxIterations_ = maxIterations;
+}
+
+void ICP::setWidth(double width){
+    width_ = width;
+}
+
+void ICP::setSampleStep(double sampleStep){
+    sampleStep_ = sampleStep;
+}
+
+void ICP::setNSamples(int nSamples){
+    nSamples_ = nSamples;
+}
+
 // Get the closest points in the direction of estimated movement using a triangle
-std::vector<BlockInfo> closestPoints(intensityCloud::Ptr P, MLSM *X, Vector3d eV){
+std::vector<BlockInfo> ICP::closestPoints(intensityCloud::Ptr P, MLSM *X,std::vector<Vector3d> transforms, Vector3d eV){
 
     std::vector<BlockInfo> result;
     BlockInfo blockInfo;
     mlsm::Block* blockPtr, *bestBlockPtr;
-    intensityCloud::iterator cloudIterator = P->begin();
+   //intensityCloud::iterator cloudIterator = P->begin();
     cell::iterator cellIterator;
     int i, j;
     int ci, cj;
     cell cellPtr;
     bool found = false;
-    double minError = DBL_MAX, derror = 0;
+    double minError = DBL_MAX, d0;
+    Vector3d unitSpeed;
+    Vector3d unitDir;
+    double angle, closestAngle = M_PI;
     //ROS_INFO("Vel %f, %f", eV[0], eV[1]);
 
-  //  if ((eV[0] == 0.0) && (eV[1] == 0.0)){
-        //ROS_INFO("No estimation");
-        for (;cloudIterator != P->end();cloudIterator++){
-            if (isnan(cloudIterator->x) || isnan(cloudIterator->y) || isnan(cloudIterator->z)) continue;
-            ////ROS_INFO("Point X %.2f Y %.2f Z %.2f", cloudIterator->x, cloudIterator->y, cloudIterator->z);
-            minError = DBL_MAX;
-            blockPtr = X->findClosestBlock(*cloudIterator);
-            if (blockPtr == NULL) continue;
-            ////ROS_INFO("\tGet %d, %d", i, j);
-            ////ROS_INFO("\tFound X %.2f Y %.2f Z %.2f",blockPtr->mean_.x, blockPtr->mean_.y, blockPtr->mean_.z);
-            derror = sqrt(
-                        (blockPtr->mean_.x - cloudIterator->x) * (blockPtr->mean_.x - cloudIterator->x)
-                        + (blockPtr->mean_.y - cloudIterator->y) * (blockPtr->mean_.y - cloudIterator->y)
-                        + (blockPtr->mean_.z - cloudIterator->z) * (blockPtr->mean_.z - cloudIterator->z));
-            ////ROS_INFO("\tderror %f minError %f", derror, minError);
-            if (derror < minError){
-                minError = derror;
-                bestBlockPtr = blockPtr;
-                ////ROS_INFO("\t\tFound X %.2f Y %.2f Z %.2f",blockPtr->mean_.x, blockPtr->mean_.y, blockPtr->mean_.z);
-            }
+    //  if ((eV[0] == 0.0) && (eV[1] == 0.0)){
+    //ROS_INFO("No estimation");
+    pcl::PointXYZI p0,p[nSamples_];
+    for(int i=0;i<P->size();i++){
+        if (isnan(P->at(i).x) || isnan(P->at(i).y) || isnan(P->at(i).z)) continue;
 
-            blockInfo.blockPtr = bestBlockPtr;
-            blockInfo.i = i;
-            blockInfo.j = j;
-            result.push_back(blockInfo);
-            minError = DBL_MAX;
+        p0 = P->at(i);
+        ////ROS_INFO("Point X %.2f Y %.2f Z %.2f", cloudIterator->x, cloudIterator->y, cloudIterator->z);
+        if (transforms.size() > 0){
+            unitSpeed = eV.normalized();
+            for (int j=0;j<nSamples_;j++){
+                p[j].x = p0.x + transforms[i][0] * j * sampleStep_;
+                p[j].y = p0.y + transforms[i][1] * j * sampleStep_;
+                p[j].z = p0.z + transforms[i][2] * j * sampleStep_;
+                blockPtr = X->findClosestBlock(p[j]);
+                if (blockPtr == NULL) break;
+
+                // Find angle between the block and p0
+                unitDir[0] = blockPtr->mean_.x - p0.x;
+                unitDir[1] = blockPtr->mean_.y - p0.y;
+                unitDir[2] = blockPtr->mean_.z - p0.z;
+                unitDir = unitDir.normalized();
+                angle = acos(unitSpeed.dot(unitDir));
+                if (fabs(angle) < closestAngle){
+                    bestBlockPtr = blockPtr;
+                    closestAngle = angle;
+                }
+            }
         }
-        ////ROS_INFO("Finished finding closest points");
-        return result;
+        else {
+            minError = DBL_MAX;
+            blockPtr = X->findClosestBlock(p0);
+            if (blockPtr == NULL) continue;
+            bestBlockPtr = blockPtr;
+        }
+        blockInfo.blockPtr = bestBlockPtr;
+        blockInfo.i = i;
+        blockInfo.j = j;
+        result.push_back(blockInfo);
+        minError = DBL_MAX;
+    }
+    ////ROS_INFO("Finished finding closest points");
+    return result;
     /*}
     //ROS_INFO("With estimation");
 
@@ -218,39 +255,58 @@ std::vector<BlockInfo> closestPoints(intensityCloud::Ptr P, MLSM *X, Vector3d eV
     return result;*/
 }
 
-void ICP::applyTransformation(intensityCloud::Ptr P, std::vector<double> timeStamps, Matrix4f R, Vector3d T, Vector3d Tv){
+std::vector<Vector3d> ICP::applyTransformation(intensityCloud::Ptr P, std::vector<double> timeStamps, Matrix4f R, Vector3d V, Vector3d T){
+    std::vector<Vector3d> result;
     intensityCloud::iterator cloudIterator = P->begin();
     //R(0,3) = T[0];
     //R(1,3) = T[1];
     //R(2,3) = T[2];
     //pcl::transformPointCloud(*P,*P,R);
+    //ROS_INFO("Speed %f %f %f Stamps %d Points %d",V[0],V[1],V[2], timeStamps.size(), P->size());
 
-    if (((Tv[0] = 0) && (Tv[1] = 0) && (Tv[2] = 0)) || (timeStamps.size() != P->size())){
+    if (((V[0] == 0) && (V[1] == 0) && (V[2] == 0)) || (timeStamps.size() != P->size())){
         R(0,3) = T[0];
         R(1,3) = T[1];
         R(2,3) = T[2];
+
         pcl::transformPointCloud(*P,*P,R);
     }
     else {
-        long int prevStamp = cloudIterator->data_c[3];
-        long int lastStamp = P->back().data_c[3];
+        //double prevStamp = cloudIterator->data_c[3];
+        double lastStamp;
 
-        long int movingTime = 0;
-        Vector3d transformation;
-        for(int i=0;i<P->height;i++){
-            for (int j=0;j<P->width;j++){
-                if (isnan(P->at(i,j).x) || isnan(P->at(i,j).y) || isnan(P->at(i,j).z)) continue;
-                 // Possitive stamp means movement. Accumulate translation time
-                if (timeStamps[i] == 0) movingTime = lastStamp - timeStamps[i];
-                transformation = Tv * movingTime;
-                // Rotation? (Assuming only linear movement, orientation known
-                P->at(i,j).x = P->at(i,j).x - transformation[0] + T[0];
-                P->at(i,j).y = P->at(i,j).y - transformation[1] + T[1];
-                P->at(i,j).z = P->at(i,j).z - transformation[2] + T[2];
-                //prevStamp = fabs(cloudIterator->data_c[3]);
+        std::vector<double>::reverse_iterator rit = timeStamps.rbegin();
+        for (; rit!= timeStamps.rend(); ++rit)
+        {
+            if (*rit != 0){
+                lastStamp = *rit;
+                break;
             }
         }
+
+        double movingTime = 0;
+        Vector3d transformation;
+        for(int i=0;i<P->size();i++){
+            if (isnan(P->at(i).x) || isnan(P->at(i).y) || isnan(P->at(i).z)) continue;
+            // Possitive stamp means movement. Accumulate translation time
+
+            if (timeStamps[i] != 0) movingTime = lastStamp - timeStamps[i];
+            //ROS_INFO("MovingT %f tn = %f ti = %f",movingTime,lastStamp,timeStamps[i]);
+
+            transformation[0] = V[0] * movingTime;
+            transformation[1] = V[1] * movingTime;
+            transformation[2] = V[2] * movingTime;
+            //ROS_INFO("Transformation x = %f y = %f z = %f",transformation[0],transformation[1],transformation[2]);
+            // Rotation? (Assuming only linear movement, orientation known
+            result.push_back(transformation);
+            P->at(i).x = P->at(i).x - transformation[0] + T[0];
+            P->at(i).y = P->at(i).y - transformation[1] + T[1];
+            P->at(i).z = P->at(i).z - transformation[2] + T[2];
+            //prevStamp = fabs(cloudIterator->data_c[3]);
+
+        }
     }
+    return result;
 }
 
 double ICP::registration(intensityCloud::Ptr P, std::vector<BlockInfo>* Y, Vector3d *Tv, Vector3d *T, Matrix4f *R){
@@ -267,7 +323,7 @@ double ICP::registration(intensityCloud::Ptr P, std::vector<BlockInfo>* Y, Vecto
     intensityCloud candidatePointCloud, pointCloud;
     pcl::PointXYZI p;
     int ySize = Y->size();
-//Centroid calculation
+    //Centroid calculation
     for (;cloudIterator != P->end();cloudIterator++){
         if (isnan(cloudIterator->x) || isnan(cloudIterator->y) || isnan(cloudIterator->z)) continue;
         validPoints++;
@@ -290,7 +346,7 @@ double ICP::registration(intensityCloud::Ptr P, std::vector<BlockInfo>* Y, Vecto
     //ROS_INFO("Candidates centroid %f %f %f",centroidY.x,centroidY.y,centroidY.z);
     //ROS_INFO("Points centroid %f %f %f",centroidP.x,centroidP.y,centroidP.z);
 
-//Move both to same origin
+    //Move both to same origin
     for(int i=0;i<ySize;i++){
         p.x = Y->at(i).blockPtr->mean_.x - centroidY.x;
         p.y = Y->at(i).blockPtr->mean_.y - centroidY.y;
@@ -304,7 +360,7 @@ double ICP::registration(intensityCloud::Ptr P, std::vector<BlockInfo>* Y, Vecto
         p.z = cloudIterator->z - centroidP.z;
         pointCloud.push_back(p);
     }
-// Calculate SVD
+    // Calculate SVD
     //pcl::ConstCloudIterator<pcl::PointXYZI> p1(pointCloud);
     //pcl::ConstCloudIterator<pcl::PointXYZI> p2(candidatePointCloud);
     pcl::registration::TransformationEstimationSVD<pcl::PointXYZI, pcl::PointXYZI>::Matrix4 rotation;
@@ -319,8 +375,8 @@ double ICP::registration(intensityCloud::Ptr P, std::vector<BlockInfo>* Y, Vecto
 
     //svd.estimateRigidTransformation(pointCloud,candidatePointCloud, *correspondences,rotation);
     //ROS_INFO("\n \tSVD Rotation \n%f %f %f\n%f %f %f\n%f %f %f",rotation(0,0),rotation(0,1),rotation(0,2),
-                                                                       //rotation(1,0),rotation(1,1),rotation(1,2),
-                                                                       //rotation(2,0),rotation(2,1),rotation(2,2));
+    //rotation(1,0),rotation(1,1),rotation(1,2),
+    //rotation(2,0),rotation(2,1),rotation(2,2));
 
 
     //lm.estimateRigidTransformation(pointCloud,candidatePointCloud, *correspondences,rotation);
@@ -371,9 +427,12 @@ double ICP::registration(intensityCloud::Ptr P, std::vector<BlockInfo>* Y, Vecto
     centroid2.z /= validPoints;
     //ROS_INFO("\n\tCentroid2 x = %f y = %f z = %f",centroid2.x, centroid2.y, centroid2.z);
 
-    (*T)[0] = centroidY.x - centroid2.x;
-    (*T)[1] = centroidY.y - centroid2.y;
-    (*T)[2] = centroidY.z - centroid2.z;
+    (*T)[0] = centroidY.x - centroidP.x;
+    (*T)[1] = centroidY.y - centroidP.y;
+    (*T)[2] = centroidY.z - centroidP.z;
+    //(*T)[0] = centroidY.x - centroid2.x;
+    //(*T)[1] = centroidY.y - centroid2.y;
+    //(*T)[2] = centroidY.z - centroid2.z;
     //ROS_INFO("\n\tTranslation x = %f y = %f z = %f error = %f",(*T)[0], (*T)[1], (*T)[2], error);
 
     return error;
@@ -413,7 +472,7 @@ bool ICP::getTransformation(avora_msgs::StampedIntensityCloudPtr P0, MLSM *X, Ve
     (*Tv)[0] = 0;
     (*Tv)[1] = 0;
     (*Tv)[2] = 0;
-    applyTransformation(P, P0->timeStamps, eR, eT, eV);
+    std::vector<Vector3d> transforms = applyTransformation(P, P0->timeStamps, eR, eV, eT);
     ROS_INFO("Initial transformation applied");
     intensityCloud sum;
     sensor_msgs::PointCloud2 debugCloud;
@@ -425,14 +484,14 @@ bool ICP::getTransformation(avora_msgs::StampedIntensityCloudPtr P0, MLSM *X, Ve
         (*R) = Matrix<float, 4, 4>::Identity();
         // Calculate closest points
         //ROS_INFO("Get closest points");
-        Y = closestPoints(P,X, eV);
+        Y = closestPoints(P,X, transforms, eV);
         // Calculate transformation
         //ROS_INFO("Get transformation");
         error = registration(P,&Y,Tv, T, R);
 
         // Iterate through P applying the correct transformation depending on Tv and the stamp
         //ROS_INFO("Applying transformation");
-        applyTransformation(P,P0->timeStamps, *R, *T, *Tv);
+        transforms = applyTransformation(P,P0->timeStamps, *R, *Tv, *T);
         // Calculate error
         //ROS_INFO("Calculate error");
         error = calculateError(P, &Y);
@@ -441,18 +500,18 @@ bool ICP::getTransformation(avora_msgs::StampedIntensityCloudPtr P0, MLSM *X, Ve
         accumulatedT += *T;
         accumulatedR = accumulatedR * (*R);
         //ROS_INFO("\n%d \tTrl x = %f y = %f z = %f error = %f \n\tAcc  x = %f y = %f z = %f",iterations,(*T)[0], (*T)[1], (*T)[2], error,
-                            //accumulatedT[0], accumulatedT[1], accumulatedT[2]);
+        //accumulatedT[0], accumulatedT[1], accumulatedT[2]);
 
         //ROS_INFO("\n%d \tRotation \n%f %f %f\n%f %f %f\n%f %f %f",iterations,accumulatedR(0,0),accumulatedR(0,1),accumulatedR(0,2),
-                   //                                                        accumulatedR(1,0),accumulatedR(1,1),accumulatedR(1,2),
-                   //                                                        accumulatedR(2,0),accumulatedR(2,1),accumulatedR(2,2));
+        //                                                        accumulatedR(1,0),accumulatedR(1,1),accumulatedR(1,2),
+        //                                                        accumulatedR(2,0),accumulatedR(2,1),accumulatedR(2,2));
 
     }
     ROS_INFO("\n%d \tTrl x = %f y = %f z = %f error = %f \n\tAcc  x = %f y = %f z = %f",iterations,(*T)[0], (*T)[1], (*T)[2], error,
-                                accumulatedT[0], accumulatedT[1], accumulatedT[2]);
+             accumulatedT[0], accumulatedT[1], accumulatedT[2]);
     ROS_INFO("\n%d \tRotation \n%f %f %f\n%f %f %f\n%f %f %f",iterations,accumulatedR(0,0),accumulatedR(0,1),accumulatedR(0,2),
-                                                                               accumulatedR(1,0),accumulatedR(1,1),accumulatedR(1,2),
-                                                                               accumulatedR(2,0),accumulatedR(2,1),accumulatedR(2,2));
+             accumulatedR(1,0),accumulatedR(1,1),accumulatedR(1,2),
+             accumulatedR(2,0),accumulatedR(2,1),accumulatedR(2,2));
 
     (*T) = accumulatedT;
     (*R) = accumulatedR;

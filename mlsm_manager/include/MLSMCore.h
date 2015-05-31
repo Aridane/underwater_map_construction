@@ -13,6 +13,8 @@
 #include <geometry_msgs/Twist.h>
 #include <nav_msgs/Odometry.h>
 
+#include <tf/transform_broadcaster.h>
+
 #include <pcl/ros/conversions.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
@@ -33,7 +35,7 @@ private:
     string orientationSubscribeTopic_;
     string velTopic_;
 
-
+    double speedError_;
 	double resolution_;
 	double sizeXMeters_;
 	double sizeYMeters_;
@@ -50,6 +52,7 @@ private:
 
     tf::Quaternion lastOrientation_;
     tf::Point lastPosition_;
+    tf::TransformBroadcaster br_;
 
 	visualization_msgs::MarkerArray markers;
 
