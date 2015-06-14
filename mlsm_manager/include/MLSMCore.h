@@ -44,6 +44,7 @@ private:
     geometry_msgs::Twist meanVelocity_;
     geometry_msgs::Pose poseChange_;
     geometry_msgs::Pose oldPose_;
+    geometry_msgs::Pose pose_;
     double lastTime_;
     double time_;
     unsigned long int velSamples_;

@@ -107,6 +107,7 @@ private:
   // DiffDrive stuff
   void cmdVelCallback(const geometry_msgs::Twist::ConstPtr& cmd_msg);
 
+  double error_;
   double x_;
   double z_;
   double rot_;

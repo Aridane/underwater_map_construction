@@ -16,13 +16,18 @@ MLSMCore::MLSMCore(ros::NodeHandle* n):
     nh.param("fastUpdate", fastUpdate_, bool("false"));
     nh.param("speedError", speedError_, double(0));
 
+
+
     nh.param("verticalElasticity", verticalElasticity_, double(0));
     int maxIterations;
     double errorThreshold;
+    int nSamples;
+    double sampleStep;
 
     nh.param("maxIterations", maxIterations, int(1000));
     nh.param("errorThreshold", errorThreshold, double(0.3));
-
+    nh.param("nSamples", nSamples, int(5));
+    nh.param("sampleStep", sampleStep, double(0.25));
 
     ROS_DEBUG("Initializing map");
 
@@ -41,8 +46,8 @@ MLSMCore::MLSMCore(ros::NodeHandle* n):
     ICPSolver_.setErrorThreshold(errorThreshold);
     ICPSolver_.setMaxIterations(maxIterations);
     ICPSolver_.setWidth(3);
-    ICPSolver_.setNSamples(5);
-    ICPSolver_.setSampleStep(0.15);
+    ICPSolver_.setNSamples(nSamples);
+    ICPSolver_.setSampleStep(sampleStep);
 
     lastPosition_[0] = 0;
     lastPosition_[1] = 0;
@@ -74,7 +79,8 @@ void MLSMCore::matchingCallback(const std_msgs::Bool msg){
 
 void MLSMCore::velCallback(nav_msgs::Odometry msg){
 
-    meanVelocity_.angular.x = 0;
+    pose_ = msg.pose.pose;
+    /*meanVelocity_.angular.x = 0;
     meanVelocity_.angular.y = 0;
     meanVelocity_.angular.z = 0;
     meanVelocity_.linear.x += (fabs(msg.twist.twist.linear.x) > 0.001) ? msg.twist.twist.linear.x : 0.0;
@@ -95,7 +101,7 @@ void MLSMCore::velCallback(nav_msgs::Odometry msg){
 
         lastTime_ = ros::Time::now().toSec();
     }
-    velSamples_++;
+    velSamples_++;*/
 
 }
 
@@ -103,49 +109,70 @@ int MLSMCore::addPointCloudToMap(avora_msgs::StampedIntensityCloudPtr cloudMsg){
     ROS_DEBUG("Adding point cloud");
     intensityCloud cloud;
     intensityCloud::Ptr cloudPtr;
+    intensityCloud::Ptr result;
     pcl::fromROSMsg(cloudMsg->cloud,cloud);
 
     cloudFrame_ = cloudMsg->header.frame_id;
-    Vector3d eV, eT, V, T;
+    Vector3d eV, eT, V, T, direction;
     Eigen::Matrix4f eR = Matrix<float, 4, 4>::Identity(), R = Matrix<float, 4, 4>::Identity();
+
+
+
+
     eT[0] = 0;
     eT[1] = 0;
     eT[2] = 0;
     eV = V = T = eT;
     //ROS_INFO("Cloud Received Height = %d Width = %d", cloud->height, cloud->width);
     if (matching_){
-        ROS_INFO("TimeChange %f",time_);
+        tf::Quaternion qt;
+        /*tf::quaternionMsgToTF(pose_.orientation,qt);
+        tf::Matrix3x3 m(qt);
+        double roll, pitch, yaw;
+        m.getRPY(roll, pitch, yaw);
 
-        ROS_INFO("Derived change x=%.3f y=%.3f z=%.3f",poseChange_.position.x,poseChange_.position.y,poseChange_.position.z);
-        ROS_INFO("Derived vel x=%.3f y=%.3f z=%.3f",poseChange_.position.x/time_,poseChange_.position.y/time_,poseChange_.position.z/time_);
+        ROS_INFO("R = %f P = %f Y = %f", roll,pitch,yaw);
+        direction[0] = cos(yaw)*cos(pitch);
+        direction[1] = sin(yaw)*cos(pitch);
+        direction[2] = sin(pitch);*/
+        direction[0] = pose_.position.x;
+        direction[1] = pose_.position.y;
+        direction[2] = pose_.position.z;
+        direction.normalize();
+
+        ROS_INFO("X = %f Y = %f Z = %f", direction[0],direction[1],direction[2]);
+        //ROS_INFO("TimeChange %f",time_);
+
+        //ROS_INFO("Derived change x=%.3f y=%.3f z=%.3f",poseChange_.position.x,poseChange_.position.y,poseChange_.position.z);
+        //ROS_INFO("Derived vel x=%.3f y=%.3f z=%.3f",poseChange_.position.x/time_,poseChange_.position.y/time_,poseChange_.position.z/time_);
 
 
-        eV[0] = (time_ != 0) ? poseChange_.position.x/time_ : time_;
-        eV[1] = (time_ != 0) ? poseChange_.position.y/time_ : time_;
-        eV[2] = (time_ != 0) ? poseChange_.position.z/time_ : time_;
-        eV[0] = eV[0] + eV[0]*speedError_;
-        eV[1] = eV[1] + eV[1]*speedError_;
-        eV[2] = eV[2] + eV[2]*speedError_;
-        ROS_INFO("Estimated vel x=%.3f y=%.3f z=%.3f",eV[0],eV[1],eV[2]);
+        eV[0] = direction[0];//(time_ != 0) ? poseChange_.position.x/time_ : time_;
+        eV[1] = direction[1];//(time_ != 0) ? poseChange_.position.y/time_ : time_;
+        eV[2] = direction[2];//(time_ != 0) ? poseChange_.position.z/time_ : time_;
+        //ROS_INFO("No Error vel x=%.3f y=%.3f z=%.3f",eV[0],eV[1],eV[2]);
 
-        ICPSolver_.getTransformation(cloudMsg,&map_,eV, eT, eR, &V, &T, &R);
+        //eV[0] = 0;//roundf((eV[0] + eV[0]*speedError_)*1000)*0.001;
+        //eV[1] = 0;//roundf((eV[1] + eV[1]*speedError_)*1000)*0.001;
+        //eV[2] = 0;//roundf((eV[2] + eV[2]*speedError_)*1000)*0.001;
+        //ROS_INFO("Estimated vel x=%.3f y=%.3f z=%.3f",eV[0],eV[1],eV[2]);
+
+        result = ICPSolver_.getTransformation(cloudMsg,&map_,eV, eT, eR, &V, &T, &R);
 
         /*Matrix3f r3;
         for (int i=0;i<3;i++){
             for (int j=0;j<3;j++){
                 r3(i,j) = R(i,j);
             }
-        }
+        }*/
 
-        Quaternionf eQ(r3);
+        //Quaternionf eQ(r3);
 
-        tf::Quaternion qt;
-
-        qt.setX(eQ.x());
-        qt.setY(eQ.y());
-        qt.setZ(eQ.z());
-        qt.setW(eQ.w());
-
+        //qt.setX(eQ.x());
+        //qt.setY(eQ.y());
+        //qt.setZ(eQ.z());
+        //qt.setW(eQ.w());
+        qt.setRPY(0,0,0);
         tf::Vector3 vt2(T[0], T[1], T[2]);
 
         tf::Transform map_to_odom(qt, vt2);
@@ -154,14 +181,14 @@ int MLSMCore::addPointCloudToMap(avora_msgs::StampedIntensityCloudPtr cloudMsg){
         br_.sendTransform(tf::StampedTransform(map_to_odom,
                                                 current_time,
                                                 "map",
-                                                "odom"));*/
+                                                "odom"));
 
-        R(0,3) = T[0];
-        R(1,3) = T[1];
-        R(2,3) = T[2];
-        pcl::transformPointCloud(cloud,cloud,R);
-        cloudPtr = boost::make_shared<intensityCloud>(cloud);
-        map_.addPointCloud(cloudPtr);
+        //R(0,3) = T[0];
+        //R(1,3) = T[1];
+        //R(2,3) = T[2];
+        //pcl::transformPointCloud(cloud,cloud,R);
+        //cloudPtr = boost::make_shared<intensityCloud>(cloud);
+        //map_.addPointCloud(result);
 
 
         meanVelocity_.angular.x = 0;
@@ -173,6 +200,19 @@ int MLSMCore::addPointCloudToMap(avora_msgs::StampedIntensityCloudPtr cloudMsg){
         velSamples_ = 0;
     }
     else{
+        tf::Quaternion qt;
+        qt.setRPY(0,0,0);
+        tf::Vector3 vt2(0,0,0);
+
+        tf::Transform map_to_odom(qt, vt2);
+        ros::Time current_time = ros::Time::now();
+
+        br_.sendTransform(tf::StampedTransform(map_to_odom,
+                                                current_time,
+                                                "map",
+                                                "odom"));
+
+
         cloudPtr = boost::make_shared<intensityCloud>(cloud);
         map_.addPointCloud(cloudPtr);
     }
@@ -197,6 +237,7 @@ void MLSMCore::orientationCallback(const geometry_msgs::QuaternionPtr orientatio
 void MLSMCore::cloudCallback(avora_msgs::StampedIntensityCloudPtr cloudMsg){
     //intensityCloud::Ptr cloud = boost::shared_ptr<intensityCloud>(new intensityCloud);
     //pcl::fromROSMsg(cloudMsg,*cloud);
+    //debugPublisher_.publish(cloudMsg->cloud);
     addPointCloudToMap(cloudMsg);
 }
 

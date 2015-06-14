@@ -4,6 +4,8 @@ resolution: 0.3
 sizeXMeters: 120
 sizeYMeters: 120
 fastUpdate: false
-maxIterations: 1000
-errorThreshold: 0.25
-speedError: -0.3
+maxIterations: 2000
+errorThreshold: 0.1
+speedError: 0
+nSamples: 2
+sampleStep: 0.2

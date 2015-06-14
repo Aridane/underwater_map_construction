@@ -23,7 +23,7 @@ void SonarToCloud::onInit()
     nh_.param("sonarCloudPublishTopic", sonarCloudPublishTopic_, string("/sonar/scan/sonarCloud"));
     nh_.param("scanFlagTopic",scanFlagTopic_,string("sonar/scan/flag"));
     nh_.param("laserCloudPublishTopic", laserCloudPublishTopic_, string("/sonar/scan/laserCloud"));
-    nh_.param("targetFrame",targetFrame_,string("depth"));
+    nh_.param("targetFrame",targetFrame_,string("odom"));
     nh_.param("heightLimit", heightLimit_, double(4.8));
     nh_.param("velSubscribeTopic", velTopic_, string("/odom_combined"));
 
@@ -95,7 +95,7 @@ void SonarToCloud::velCallback(nav_msgs::Odometry msg){
         poseChange_.position.x += (msg.pose.pose.position.x - oldPose_.position.x);
         poseChange_.position.y += (msg.pose.pose.position.y - oldPose_.position.y);
         poseChange_.position.z += (msg.pose.pose.position.z - oldPose_.position.z);
-        if ((fabs(msg.pose.pose.position.x - oldPose_.position.x) > 0.001) || (fabs(msg.pose.pose.position.y - oldPose_.position.y) > 0.001)){
+        if ((fabs(msg.pose.pose.position.x - oldPose_.position.x) > 0.01) || (fabs(msg.pose.pose.position.y - oldPose_.position.y) > 0.01)){
             time_ = time_ + (ros::Time::now().toSec() - lastTime_);
             moving_ = true;
         }

@@ -234,14 +234,16 @@ void CharleSonarPlugin::OnScan(ConstLaserScanStampedPtr &_msg)
   int intensity = 128;
   if (_msg->scan().ranges().Get(currentStep_)!= _msg->scan().range_max())
   {
-  	sonar_msg.intensities[pos] = intensity;
-	  int i = 1;
-	  while(intensity != 0){
-	  	if ((intensity = intensity - this->decay_) < 0) intensity = 0;
-	  	if ((pos + i) < binCount_) sonar_msg.intensities[pos+i] = intensity;
-	  	if ((pos - i) >= 0) sonar_msg.intensities[pos-i] = intensity;
-	  	i++;
-	  }
+    if (pos != 0){
+    	sonar_msg.intensities[pos] = intensity;
+  	  int i = 1;
+  	  while(intensity != 0){
+  	  	if ((intensity = intensity - this->decay_) < 0) intensity = 0;
+  	  	if ((pos + i) < binCount_) sonar_msg.intensities[pos+i] = intensity;
+  	  	if ((pos - i) >= 0) sonar_msg.intensities[pos-i] = intensity;
+  	  	i++;
+  	  }
+    }
   }
   currentStep_ = (currentStep_ + 1) % _msg->scan().ranges_size();
 

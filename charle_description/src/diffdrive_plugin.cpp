@@ -138,6 +138,19 @@ void DiffDrivePlugin::Load(physics::ModelPtr _parent, sdf::ElementPtr _sdf)
     this->topicName = _sdf->GetElement("topicName")->GetValueString();
   }
 
+  if (!_sdf->HasElement("error"))
+  {
+    ROS_WARN("Differential Drive plugin missing <error>, defaults to 0");
+    this->error_ = 0;
+  }
+  else
+  {
+
+    this->error_ = _sdf->GetElement("error")->GetValueDouble();
+    ROS_INFO("Differential Drive plugin error %f",this->error_);
+
+  }
+
   wheelSpeed[RIGHT] = 0;
   wheelSpeed[LEFT] = 0;
 
@@ -305,7 +318,7 @@ void DiffDrivePlugin::publish_odometry()
 
 
   tf::Quaternion qt(pose.rot.x, pose.rot.y, pose.rot.z, pose.rot.w);
-  tf::Vector3 vt(pose.pos.x, pose.pos.y, 0);
+  tf::Vector3 vt(pose.pos.x + pose.pos.x * this->error_, pose.pos.y + pose.pos.y * this->error_, 0);
 
   tf::Transform depth_to_odom(qt, vt);
   transform_broadcaster_->sendTransform(tf::StampedTransform(depth_to_odom,
@@ -326,8 +339,8 @@ void DiffDrivePlugin::publish_odometry()
 
 
   // publish odom topic
-  odom_.pose.pose.position.x = pose.pos.x;
-  odom_.pose.pose.position.y = pose.pos.y;
+  odom_.pose.pose.position.x = pose.pos.x + pose.pos.x * this->error_;
+  odom_.pose.pose.position.y = pose.pos.y + pose.pos.y * this->error_;
   odom_.pose.pose.position.z = pose.pos.z;
 
   odom_.pose.pose.orientation.x = pose.rot.x;

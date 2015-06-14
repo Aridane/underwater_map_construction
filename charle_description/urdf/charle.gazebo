@@ -24,6 +24,7 @@
 	    		<wheelSeparation>0.33</wheelSeparation>
 	    		<wheelDiameter>0.1</wheelDiameter>
 	     		<torque>100</torque>
+	     		<error>-0.3</error>
 	     		<!--<interface:position name="position_iface_0"></interface:position>-->
 	 		<topicName>cmd_vel</topicName>
 		</plugin>
@@ -80,7 +81,7 @@
         </scan>
         <range>
           <min>0.3</min>
-          <max>20</max>
+          <max>50</max>
           <resolution>0.3</resolution>
         </range>
        <!-- <noise>
@@ -94,7 +95,7 @@
         <topicName>/charle/sonar</topicName>
         <frameName>sonarDato</frameName>
         <step>3</step>
-        <decay>32</decay>
+        <decay>100</decay>
         <binCount>500</binCount>
       </plugin>
     </sensor>
