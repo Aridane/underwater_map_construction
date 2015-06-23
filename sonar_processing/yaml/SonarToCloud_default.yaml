@@ -2,3 +2,4 @@ mode: 'SONAR'
 scanSize: 120
 sonarSubscribeTopic: '/charle/sonar'
 targetFrame: 'odom'
+velSubscribeTopic: '/cmd_vel'

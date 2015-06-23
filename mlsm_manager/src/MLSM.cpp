@@ -1,14 +1,14 @@
 #include "MLSM.h"
 
 MLSM::MLSM() {
-    kdtree_ = kd_create(2);
+    /*kdtree_ = kd_create(2);
     resolution_ = 0.3;
     spanX_ = DEFAULTSIZEXMETERS / resolution_;
     spanY_ = DEFAULTSIZEYMETERS / resolution_;
     sizeXMeters_ = DEFAULTSIZEXMETERS;
     sizeYMeters_ = DEFAULTSIZEYMETERS;
     grid_ = boost::make_shared<QuadGrid>(
-                QuadGrid(spanX_, spanY_, spanX_, spanY_));
+                QuadGrid(spanX_, spanY_, spanX_, spanY_));*/
     markersId = 0;
 }
 
@@ -38,6 +38,8 @@ void MLSM::init(double resolution, double sizeXMeters, double sizeYMeters, doubl
     grid_ = boost::make_shared<QuadGrid>(
                 QuadGrid(spanX_, spanY_, spanX_, spanY_));
     verticalElasticity_ = verticalElasticity;
+    ROS_INFO("INIT: Resolution %f sizeXM %f sizeYM %f",resolution_,sizeXMeters_,sizeYMeters_);
+
 }
 
 double MLSM::getResolution(){
@@ -64,8 +66,11 @@ Block* MLSM::findClosestBlock(pcl::PointXYZI point){
     pos[0] = floor(point.x / resolution_);
     pos[1] = floor(point.y / resolution_);
 
-    //ROS_INFO("Point %g %g",pos[0],pos[1]);
-
+    //ROS_INFO("Point Cell %g %g",pos[0],pos[1]);
+    if ((fabs(pos[0]) > spanX_) || (fabs(pos[1]) > spanY_)){
+        ROS_ERROR("Point out of range %f %f %f", point.x,point.y,point.z);
+        return NULL;
+    }
     // Find correct cell
     //ROS_INFO("GET NEAREST POINT");
     closestCellRes = kd_nearest(kdtree_, pos);
@@ -76,7 +81,7 @@ Block* MLSM::findClosestBlock(pcl::PointXYZI point){
     //int j = (int)(round(pos[1]));
     //cellPos = (int*)kd_res_item_data(closestCellRes);
     //ROS_INFO("iCell %d %d",i,j);
-    //ROS_INFO("fCell %f %f",pos[0],pos[1]);
+    //ROS_INFO("Closest Cell %f %f",round(pos[0]),round(pos[1]));
     //if (cellP != NULL) ROS_INFO("NOT NULL CELL");
     //else ROS_INFO("NULL CELL");
     // Find suitable block in cell
@@ -516,12 +521,12 @@ visualization_msgs::MarkerArray MLSM::getROSMarkers(string frameId) {
                 marker.id = markersId;
                 markersId++;
 
-                marker.type = visualization_msgs::Marker::CYLINDER;
+                marker.type = visualization_msgs::Marker::CUBE;
                 marker.action = visualization_msgs::Marker::ADD;
 
                 // Set the scale of the marker -- 1x1x1 here means 1m on a side
-                marker.scale.x = resolution_ - 0.1;
-                marker.scale.y = resolution_ - 0.1;
+                marker.scale.x = resolution_;
+                marker.scale.y = resolution_;
                 if (iterator->get()->depth_ == 0)marker.scale.z = 0.1;
                 else marker.scale.z = iterator->get()->depth_;
 

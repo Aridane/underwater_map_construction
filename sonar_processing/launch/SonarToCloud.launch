@@ -2,6 +2,7 @@
 	<node pkg="nodelet" type="nodelet" args="manager" name="SonarToCloud_nodelet_manager" output="screen"/>
 	
 	<rosparam param="SonarToCloudNodelet" file="$(find sonar_processing)/yaml/SonarToCloud_default.yaml"/>
+	
 	<node pkg="nodelet" type="nodelet" name="SonarToCloudNodelet" 
 		args="load sonar_processing/SonarToCloud standalone_nodelet" output="screen">	
 		<rosparam command="load" file="$(find sonar_processing)/yaml/SonarToCloud_default.yaml"/>

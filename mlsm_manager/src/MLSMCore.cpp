@@ -18,6 +18,7 @@ MLSMCore::MLSMCore(ros::NodeHandle* n):
 
 
 
+
     nh.param("verticalElasticity", verticalElasticity_, double(0));
     int maxIterations;
     double errorThreshold;
@@ -30,6 +31,7 @@ MLSMCore::MLSMCore(ros::NodeHandle* n):
     nh.param("sampleStep", sampleStep, double(0.25));
 
     ROS_DEBUG("Initializing map");
+    ROS_INFO("Map params\n\tResolution %f sizeXM %f sizeYM %f\n\t Max Iterationr: %d nSamples: %d",resolution_,sizeXMeters_,sizeYMeters_,maxIterations, nSamples);
 
     matching_ = false;
     map_.init(resolution_,sizeXMeters_,sizeYMeters_, verticalElasticity_);
@@ -220,8 +222,8 @@ int MLSMCore::addPointCloudToMap(avora_msgs::StampedIntensityCloudPtr cloudMsg){
 	//Publish markers provisionally for debugging
 	//TODO publish markers on service demand
 	//TODO Remove old markers??
-    //markers = map_.getROSMarkers("map");
-    //markerPublisher_.publish(markers);
+    markers = map_.getROSMarkers("map");
+    markerPublisher_.publish(markers);
     sensor_msgs::PointCloud2 msgcloud = map_.getROSCloud("map");
     mapPublisher_.publish(msgcloud);
     return 0;

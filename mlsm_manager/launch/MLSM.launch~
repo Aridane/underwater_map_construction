@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <launch>
 	<node pkg="mlsm_manager" type="MLSM_core" name="MLSM_core" output="screen">
-		<!--<rosparam command="load" file="$(find mlsm_manager)/yaml/MLSM_Core_default.yaml"/>-->
+		<rosparam command="load" file="$(find mlsm_manager)/yaml/MLSM_Core_default.yaml"/>
 	</node>
 </launch>

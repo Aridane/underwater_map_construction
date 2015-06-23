@@ -169,7 +169,7 @@
   <joint name="laserDato_to_sonar" type="fixed">
     <parent link="sonar"/>
     <child link="laserDato"/>
-    <origin rpy="1.57 3.14 3.14" xyz="-0.0 -0.075 -0.02"/>
+    <origin rpy="1.57 0 0" xyz="-0.0 -0.075 -0.02"/>
   </joint>
 
   <link name="laserDato">

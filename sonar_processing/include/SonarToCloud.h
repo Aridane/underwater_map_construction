@@ -95,7 +95,7 @@ namespace sonar_processing
 	
 		void beamCallback(avora_msgs::SonarScanLineConstPtr scanLine);
         bool newAngle(avora_msgs::SonarScanLineConstPtr scan, avora_msgs::SonarScanLineConstPtr oldScanLine);
-        void velCallback(nav_msgs::Odometry msg);
+        void velCallback(geometry_msgs::Twist::Ptr msg);
         void publishSonarCloud();
         void publishLaserCloud();
 	};	

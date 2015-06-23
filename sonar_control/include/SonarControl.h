@@ -4,6 +4,7 @@
 #include <std_msgs/Float64.h>
 #include <avora_msgs/sonar_control.h>
 #include <avora_msgs/SonarScanLine.h>
+#include <avora_msgs/StampedIntensityCloud.h>
 #include <string>
 
 using namespace std;

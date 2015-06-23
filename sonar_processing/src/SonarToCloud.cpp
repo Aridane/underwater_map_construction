@@ -25,7 +25,7 @@ void SonarToCloud::onInit()
     nh_.param("laserCloudPublishTopic", laserCloudPublishTopic_, string("/sonar/scan/laserCloud"));
     nh_.param("targetFrame",targetFrame_,string("odom"));
     nh_.param("heightLimit", heightLimit_, double(4.8));
-    nh_.param("velSubscribeTopic", velTopic_, string("/odom_combined"));
+    nh_.param("velSubscribeTopic", velTopic_, string("/cmd_vel"));
 
 
     // Subscribe to incoming sonar data from driver
@@ -45,6 +45,7 @@ void SonarToCloud::onInit()
     startTime_ = 0;
     time_ = 0;
     oldStamp_ = 0;
+    moving_ = false;
 
 }
 
@@ -63,14 +64,16 @@ void SonarToCloud::sonarInit(){
     sonarCloud_->is_dense = true;
 }
 
-/*void SonarToCloud::velCallback(geometry_msgs::Twist::Ptr twistMessage){
-    ROS_INFO("Speed x = %.2f y = %.2f z = %.2f",twistMessage->linear.x,twistMessage->linear.y,twistMessage->linear.z);
+void SonarToCloud::velCallback(geometry_msgs::Twist::Ptr twistMessage){
+    //ROS_INFO("Speed x = %.2f y = %.2f z = %.2f",twistMessage->linear.x,twistMessage->linear.y,twistMessage->linear.z);
 
-    moving_ = (twistMessage->linear.x == 0);
-}*/
+    moving_ = (twistMessage->linear.x != 0) || (twistMessage->linear.y != 0);
+    if (moving_) ROS_INFO("MOVING");
+    else ROS_INFO("STOPPED");
+}
 
-void SonarToCloud::velCallback(nav_msgs::Odometry msg){
-/*
+/*void SonarToCloud::velCallback(nav_msgs::Odometry msg){
+
     if (lastTime_ == 0){
         oldPose_.position = msg.pose.pose.position;
         lastTime_ = ros::Time::now().toNSec();
@@ -86,7 +89,7 @@ void SonarToCloud::velCallback(nav_msgs::Odometry msg){
 
         //lastTime_ = ros::Time::now().toNSec();
     }
-*/
+
     if (lastTime_ == 0){
         oldPose_.position = msg.pose.pose.position;
         lastTime_ = ros::Time::now().toSec();
@@ -106,7 +109,7 @@ void SonarToCloud::velCallback(nav_msgs::Odometry msg){
 
         lastTime_ = ros::Time::now().toSec();
     }
-}
+}*/
 
 bool SonarToCloud::newAngle(avora_msgs::SonarScanLineConstPtr scan, avora_msgs::SonarScanLineConstPtr oldScanLine){
     return (fabs(scan->sensorAngle - oldScanLine->sensorAngle) > 0.001);
@@ -218,7 +221,7 @@ void SonarToCloud::beamCallback(avora_msgs::SonarScanLineConstPtr scanLine){
         for (int i=0;i<scanLine->intensities.size();i++){
             if (moving_) stampedCloudMsg_.timeStamps.push_back(scanLine->header.stamp.toSec());
             else {
-                 stampedCloudMsg_.timeStamps.push_back(0);
+                 stampedCloudMsg_.timeStamps.push_back(-scanLine->header.stamp.toSec());
             }
             geometryPoint.header = scanLine->header;
             geometryPoint.point.x = (i + 1) * rangeResolution * cos(scanLine->angle);
