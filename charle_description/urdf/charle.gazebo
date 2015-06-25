@@ -52,8 +52,10 @@
 
   <transmission name="tran1">
     <type>transmission_interface/SimpleTransmission</type>
-    <joint name="sonar_to_base_link"/>
-    <actuator name="servo1">
+    <joint name="sonar_to_base_link">
+    	<hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="sonar_to_base_link">
       <hardwareInterface>EffortJointInterface</hardwareInterface>
       <mechanicalReduction>1</mechanicalReduction>
     </actuator>
@@ -66,41 +68,25 @@
  
   <!-- hokuyo -->
   <gazebo reference="sonarDato">
-    <sensor type="gpu_ray" name="head_hokuyo_sensor">
+    <sensor type="sonar" name="head_sonar_sensor">
       <pose>0 0 0 0 0 0</pose>
       <visualize>false</visualize>
       <update_rate>30</update_rate>
-      <ray>
-        <scan>
-          <horizontal>
-            <samples>120</samples>
-            <resolution>1</resolution>
-            <min_angle>0</min_angle>
-            <max_angle>6.283</max_angle>
-          </horizontal>
-        </scan>
-        <range>
-          <min>0.3</min>
-          <max>50</max>
-          <resolution>0.3</resolution>
-        </range>
-       <!-- <noise>
-          <type>gaussian</type>
-          <mean>0.0</mean>
-          <stddev>0.01</stddev>
-        </noise>-->
-      </ray>
-      <plugin name="gazebo_ros_head_hokuyo_controller" filename="libcharle_sonar_plugin.so">-->
-      <!--	<plugin name="gazebo_ros_head_hokuyo_controller" filename="libgazebo_ros_gpu_laser.so">-->
+      <sonar>
+        <min>0.3</min>
+        <max>50</max>
+        <radius>1</radius>
+      </sonar>
+      <plugin name="gazebo_ros_head_sonar_controller" filename="libgazebo_ros_sonar.so">
         <topicName>/charle/sonar</topicName>
         <frameName>sonarDato</frameName>
         <step>3</step>
-        <decay>100</decay>
         <binCount>500</binCount>
       </plugin>
     </sensor>
   </gazebo>
-    <gazebo reference="laserDato">
+
+  <gazebo reference="laserDato">
     <sensor type="gpu_ray" name="head_hokuyo_sensor">
       <pose>0 0 0 0 0 0</pose>
       <visualize>false</visualize>

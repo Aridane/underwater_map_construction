@@ -1,7 +1,0 @@
-<library path="lib/libSonarToCloud_nodelet">
-  <class name="sonar_processing/SonarToCloud" type="sonar_processing::SonarToCloud" base_class_type="nodelet::Nodelet">
-	  <description>
-	  This is the nodelet that turns sonar readings into point clouds.
-	  </description>
-  </class>
-</library>

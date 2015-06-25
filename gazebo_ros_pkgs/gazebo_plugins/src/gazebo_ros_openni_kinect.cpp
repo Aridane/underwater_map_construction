@@ -32,8 +32,7 @@
 #include <sdf/sdf.hh>
 #include <gazebo/sensors/SensorTypes.hh>
 
-// for creating PointCloud2 from pcl point cloud
-#include <pcl_conversions/pcl_conversions.h>
+#include <sensor_msgs/point_cloud2_iterator.h>
 
 #include <tf/tf.h>
 
@@ -99,6 +98,10 @@ void GazeboRosOpenniKinect::Load(sensors::SensorPtr _parent, sdf::ElementPtr _sd
     this->point_cloud_cutoff_ = 0.4;
   else
     this->point_cloud_cutoff_ = _sdf->GetElement("pointCloudCutoff")->Get<double>();
+  if (!_sdf->GetElement("pointCloudCutoffMax"))
+    this->point_cloud_cutoff_max_ = 5.0;
+  else
+    this->point_cloud_cutoff_max_ = _sdf->GetElement("pointCloudCutoffMax")->Get<double>();
 
   load_connection_ = GazeboRosCameraUtils::OnLoad(boost::bind(&GazeboRosOpenniKinect::Advertise, this));
   GazeboRosCameraUtils::Load(_parent, _sdf);
@@ -301,10 +304,15 @@ bool GazeboRosOpenniKinect::FillPointCloudHelper(
     uint32_t rows_arg, uint32_t cols_arg,
     uint32_t step_arg, void* data_arg)
 {
-  pcl::PointCloud<pcl::PointXYZRGB> point_cloud;
+  sensor_msgs::PointCloud2Modifier pcd_modifier(point_cloud_msg);
+  pcd_modifier.setPointCloud2FieldsByString(2, "xyz", "rgb");
+  pcd_modifier.resize(rows_arg*cols_arg);
+  point_cloud_msg.is_dense = true;
 
-  point_cloud.points.resize(0);
-  point_cloud.is_dense = true;
+  sensor_msgs::PointCloud2Iterator<float> iter_x(point_cloud_msg_, "x");
+  sensor_msgs::PointCloud2Iterator<float> iter_y(point_cloud_msg_, "y");
+  sensor_msgs::PointCloud2Iterator<float> iter_z(point_cloud_msg_, "z");
+  sensor_msgs::PointCloud2Iterator<uint8_t> iter_rgb(point_cloud_msg_, "rgb");
 
   float* toCopyFrom = (float*)data_arg;
   int index = 0;
@@ -313,14 +321,13 @@ bool GazeboRosOpenniKinect::FillPointCloudHelper(
   double fl = ((double)this->width) / (2.0 *tan(hfov/2.0));
 
   // convert depth to point cloud
-  point_cloud.points.resize(cols_arg * rows_arg);
   for (uint32_t j=0; j<rows_arg; j++)
   {
     double pAngle;
     if (rows_arg>1) pAngle = atan2( (double)j - 0.5*(double)(rows_arg-1), fl);
     else            pAngle = 0.0;
 
-    for (uint32_t i=0; i<cols_arg; i++)
+    for (uint32_t i=0; i<cols_arg; i++, ++iter_x, ++iter_y, ++iter_z, ++iter_rgb)
     {
       double yAngle;
       if (cols_arg>1) yAngle = atan2( (double)i - 0.5*(double)(cols_arg-1), fl);
@@ -328,21 +335,21 @@ bool GazeboRosOpenniKinect::FillPointCloudHelper(
 
       double depth = toCopyFrom[index++]; // + 0.0*this->myParent->GetNearClip();
 
-      // in optical frame
-      // hardcoded rotation rpy(-M_PI/2, 0, -M_PI/2) is built-in
-      // to urdf, where the *_optical_frame should have above relative
-      // rotation from the physical camera *_frame
-      pcl::PointXYZRGB point;
-      point.x      = depth * tan(yAngle);
-      point.y      = depth * tan(pAngle);
-      if(depth > this->point_cloud_cutoff_)
+      if(depth > this->point_cloud_cutoff_ &&
+         depth < this->point_cloud_cutoff_max_)
       {
-        point.z    = depth;
+        // in optical frame
+        // hardcoded rotation rpy(-M_PI/2, 0, -M_PI/2) is built-in
+        // to urdf, where the *_optical_frame should have above relative
+        // rotation from the physical camera *_frame
+        *iter_x = depth * tan(yAngle);
+        *iter_y = depth * tan(pAngle);
+        *iter_z = depth;
       }
       else //point in the unseeable range
       {
-        point.x = point.y = point.z = std::numeric_limits<float>::quiet_NaN ();
-        point_cloud.is_dense = false;
+        *iter_x = *iter_y = *iter_z = std::numeric_limits<float>::quiet_NaN ();
+        point_cloud_msg.is_dense = false;
       }
 
       // put image color data for each point
@@ -350,33 +357,27 @@ bool GazeboRosOpenniKinect::FillPointCloudHelper(
       if (this->image_msg_.data.size() == rows_arg*cols_arg*3)
       {
         // color
-        point.r = image_src[i*3+j*cols_arg*3+0];
-        point.g = image_src[i*3+j*cols_arg*3+1];
-        point.b = image_src[i*3+j*cols_arg*3+2];
+        iter_rgb[0] = image_src[i*3+j*cols_arg*3+0];
+        iter_rgb[1] = image_src[i*3+j*cols_arg*3+1];
+        iter_rgb[2] = image_src[i*3+j*cols_arg*3+2];
       }
       else if (this->image_msg_.data.size() == rows_arg*cols_arg)
       {
         // mono (or bayer?  @todo; fix for bayer)
-        point.r = image_src[i+j*cols_arg];
-        point.g = image_src[i+j*cols_arg];
-        point.b = image_src[i+j*cols_arg];
+        iter_rgb[0] = image_src[i+j*cols_arg];
+        iter_rgb[1] = image_src[i+j*cols_arg];
+        iter_rgb[2] = image_src[i+j*cols_arg];
       }
       else
       {
         // no image
-        point.r = 0;
-        point.g = 0;
-        point.b = 0;
+        iter_rgb[0] = 0;
+        iter_rgb[1] = 0;
+        iter_rgb[2] = 0;
       }
-
-      point_cloud.points[i + j * cols_arg] = point;
     }
   }
 
-  point_cloud.header = pcl_conversions::toPCL(point_cloud_msg.header);
-  point_cloud.width = cols_arg;
-  point_cloud.height = rows_arg;
-  pcl::toROSMsg(point_cloud, point_cloud_msg);
   return true;
 }
 
@@ -406,7 +407,8 @@ bool GazeboRosOpenniKinect::FillDepthImageHelper(
     {
       float depth = toCopyFrom[index++];
 
-      if (depth > this->point_cloud_cutoff_)
+      if (depth > this->point_cloud_cutoff_ &&
+          depth < this->point_cloud_cutoff_max_)
       {
         dest[i + j * cols_arg] = depth;
       }

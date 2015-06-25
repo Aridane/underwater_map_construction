@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 ## System dependencies are found with CMake's conventions
+find_package(cmake_modules REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system)
 find_package(PCL REQUIRED)
 find_package(Eigen REQUIRED)

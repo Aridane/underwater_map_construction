@@ -198,7 +198,7 @@ void DiffDrivePlugin::Load(physics::ModelPtr _parent, sdf::ElementPtr _sdf)
   this->callback_queue_thread_ = boost::thread(boost::bind(&DiffDrivePlugin::QueueThread, this));
 
   // listen to the update event (broadcast every simulation iteration)
-  this->updateConnection = event::Events::ConnectWorldUpdateStart(boost::bind(&DiffDrivePlugin::UpdateChild, this));
+  this->updateConnection = event::Events::ConnectWorldUpdateBegin(boost::bind(&DiffDrivePlugin::UpdateChild, this));
 }
 
 // Update the controller
@@ -208,8 +208,7 @@ void DiffDrivePlugin::UpdateChild()
   double wd, ws;
   double d1, d2;
   double dr, da;
-  double stepTime = this->world->GetPhysicsEngine()->GetStepTime();
-
+  double stepTime = this->world->GetPhysicsEngine()->GetMaxStepSize();
   GetPositionCmd();
 
   wd = wheelDiameter;

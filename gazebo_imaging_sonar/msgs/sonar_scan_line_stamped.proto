@@ -1,0 +1,14 @@
+package gazebo_imaging_sonar.msgs;
+
+/// \ingroup gazebo_msgs
+/// \interface Sonar
+/// \brief Message for a sonar value
+
+import "sonar_scan_line.proto";
+import "time.proto";
+
+message SonarScanLineStamped
+{
+  required gazebo.msgs.Time time	= 1;
+  required SonarScanLine scan		= 2;
+}

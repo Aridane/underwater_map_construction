@@ -48,13 +48,13 @@
         <geometry>
           <mesh>
            <!--<scale>0.0254 0.0254 0.0254</scale>-->
-           <uri>file:///home/aridane/hydro_ws/src/avora_auv/underwater_map_construction/charle_gazebo/worlds/taliarte_rviz.dae</uri>
+           <uri>file:///home/aridane/indigo_ws/src/avora_auv/underwater_map_construction/charle_gazebo/worlds/taliarte_rviz.dae</uri>
           </mesh>
         </geometry>
         </collision>
         <visual name="visual">
           <geometry>
-            <mesh><uri>file:///home/aridane/hydro_ws/src/avora_auv/underwater_map_construction/charle_gazebo/worlds/taliarte_rviz.dae</uri></mesh>
+            <mesh><uri>file:///home/aridane/indigo_ws/src/avora_auv/underwater_map_construction/charle_gazebo/worlds/taliarte_rviz.dae</uri></mesh>
           </geometry>
         </visual>
       </link>

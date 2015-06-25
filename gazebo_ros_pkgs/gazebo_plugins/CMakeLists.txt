@@ -3,7 +3,7 @@ project(gazebo_plugins)
 
 find_package(catkin REQUIRED COMPONENTS 
   message_generation 
-  gazebo_msgs 
+  gazebo_msgs
   roscpp 
   rospy 
   nodelet 
@@ -19,14 +19,12 @@ find_package(catkin REQUIRED COMPONENTS
   driver_base 
   rosgraph_msgs 
   trajectory_msgs 
-  pcl_conversions
   image_transport 
   rosconsole
   cv_bridge
   polled_camera
   diagnostic_updater
   camera_info_manager
-  moveit_msgs
   avora_msgs
 )
 
@@ -35,17 +33,14 @@ if (PKG_CONFIG_FOUND)
   pkg_check_modules(XML libxml-2.0)
   pkg_check_modules(OGRE OGRE)
   pkg_check_modules(OGRE-Terrain OGRE-Terrain)
+  pkg_check_modules(OGRE-Paging OGRE-Paging)
 else()
   message(FATAL_ERROR "pkg-config is required; please install it")
 endif()
 
 # Depend on system install of Gazebo and SDFormat
 find_package(gazebo REQUIRED)
-find_package(PCL REQUIRED)
 find_package(Boost REQUIRED COMPONENTS thread)
-find_package(Qt4 REQUIRED)
-include ( ${QT_USE_FILE} )
-add_definitions(${QT_DEFINITIONS})
 
 execute_process(COMMAND
   pkg-config --variable=plugindir OGRE
@@ -68,12 +63,16 @@ include_directories(include
   ${GAZEBO_INCLUDE_DIRS}
   ${OGRE_INCLUDE_DIRS}
   ${OGRE-Terrain_INCLUDE_DIRS}
+  ${OGRE-Paging_INCLUDE_DIRS}
 )
 
 link_directories(
   ${GAZEBO_LIBRARY_DIRS}
   ${OGRE_LIBRARY_DIRS}
+  ${OGRE-Terrain_LIBRARY_DIRS}
+  ${OGRE-Paging_LIBRARY_DIRS}
 )
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GAZEBO_CXX_FLAGS}")
 
 catkin_package(
   INCLUDE_DIRS include
@@ -105,6 +104,7 @@ catkin_package(
   gazebo_ros_skid_steer_drive
   gazebo_ros_video
   gazebo_ros_planar_move
+  gazebo_ros_sonar 
   
   CATKIN_DEPENDS 
   message_generation 
@@ -124,16 +124,16 @@ catkin_package(
   driver_base 
   rosgraph_msgs 
   trajectory_msgs 
-  pcl_conversions
   image_transport 
   rosconsole
   camera_info_manager
-  moveit_msgs
   avora_msgs
+
   DEPENDS 
     gazebo 
     SDF
   )
+add_dependencies(${PROJECT_NAME}_gencfg ${catkin_EXPORTED_TARGETS})
 
 ## Executables
 add_executable(hokuyo_node src/hokuyo_node.cpp)
@@ -154,16 +154,8 @@ add_dependencies(camera_synchronizer ${PROJECT_NAME}_gencfg)
 target_link_libraries(camera_synchronizer vision_reconfigure ${catkin_LIBRARIES})
 
 add_executable(pub_joint_trajectory_test test/pub_joint_trajectory_test.cpp)
-target_link_libraries(pub_joint_trajectory_test ${GAZEBO_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${QT_LIBRARIES})
-add_dependencies(pub_joint_trajectory_test gazebo_msgs_gencpp)
-
-# below is possibly not needed any more with usage of QT_LIBRARIES:
-# -----------------------------------------------------------------
-# message(status "\n\n\n\n\n\n\n\n ${QT_LIBRARIES}\n\n\n\n\n\n\n")
-# NOTE: QtGui and QtCore are required when using the GNU GoLD linker with Gazebo 2.2.2 which has poorly-specified so deps
-# More info here: https://bitbucket.org/osrf/gazebo/pull-request/1029/fix-second-order-dynamic-library/diff
-# target_link_libraries(pub_joint_trajectory_test ${GAZEBO_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES} QtGui QtCore)
-# add_dependencies(pub_joint_trajectory_test ${catkin_EXPORTED_TARGETS}) # don't build until gazebo_msgs is done
+target_link_libraries(pub_joint_trajectory_test ${GAZEBO_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+add_dependencies(pub_joint_trajectory_test ${catkin_EXPORTED_TARGETS}) # don't build until gazebo_msgs is done
 
 add_definitions(-fPIC) # what is this for?
 
@@ -199,9 +191,6 @@ target_link_libraries(gazebo_ros_laser ${GAZEBO_LIBRARIES} RayPlugin ${catkin_LI
 
 add_library(gazebo_ros_block_laser src/gazebo_ros_block_laser.cpp)
 target_link_libraries(gazebo_ros_block_laser ${GAZEBO_LIBRARIES} RayPlugin ${catkin_LIBRARIES})
-
-add_library(gazebo_ros_moveit_planning_scene src/gazebo_ros_moveit_planning_scene.cpp)
-target_link_libraries(gazebo_ros_moveit_planning_scene ${GAZEBO_LIBRARIES} ${catkin_LIBRARIES})
 
 add_library(gazebo_ros_p3d src/gazebo_ros_p3d.cpp)
 target_link_libraries(gazebo_ros_p3d ${GAZEBO_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
@@ -267,9 +256,9 @@ target_link_libraries(gazebo_ros_ft_sensor ${GAZEBO_LIBRARIES} ${catkin_LIBRARIE
 ##
 ## Add your new plugin here
 ##
-add_library(charle_sonar_plugin src/charle_sonar_plugin.cpp)
-add_dependencies(charle_sonar_plugin avora_msgs_generate_messages_cpp)
-target_link_libraries(charle_sonar_plugin ${GAZEBO_LIBRARIES} GpuRayPlugin ${catkin_LIBRARIES})
+add_library(gazebo_ros_sonar src/gazebo_ros_sonar.cpp)
+target_link_libraries(gazebo_ros_sonar ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES} SonarPlugin)
+add_dependencies(gazebo_ros_sonar avora_msgs_generate_messages_cpp)
 
 ## Template
 add_library(gazebo_ros_template src/gazebo_ros_template.cpp)
@@ -288,7 +277,6 @@ install(TARGETS
   gazebo_ros_openni_kinect
   gazebo_ros_openni_kinect
   gazebo_ros_laser
-  gazebo_ros_moveit_planning_scene
   gazebo_ros_block_laser
   gazebo_ros_p3d
   gazebo_ros_imu
@@ -310,7 +298,8 @@ install(TARGETS
   gazebo_ros_planar_move
   pub_joint_trajectory_test  
   gazebo_ros_gpu_laser
-  charle_sonar_plugin
+  gazebo_ros_sonar
+
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   )
@@ -340,4 +329,3 @@ if (CATKIN_ENABLE_TESTING)
                     test/set_model_state_test/set_model_state_test.cpp)
   target_link_libraries(set_model_state-test ${catkin_LIBRARIES})
 endif()
-

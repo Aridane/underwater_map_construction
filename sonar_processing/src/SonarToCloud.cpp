@@ -23,6 +23,7 @@ void SonarToCloud::onInit()
     nh_.param("sonarCloudPublishTopic", sonarCloudPublishTopic_, string("/sonar/scan/sonarCloud"));
     nh_.param("scanFlagTopic",scanFlagTopic_,string("sonar/scan/flag"));
     nh_.param("laserCloudPublishTopic", laserCloudPublishTopic_, string("/sonar/scan/laserCloud"));
+    nh_.param("beamCloudPublishTopic", beamCloudPublishTopic_, string("/sonar/beam"));
     nh_.param("targetFrame",targetFrame_,string("odom"));
     nh_.param("heightLimit", heightLimit_, double(4.8));
     nh_.param("velSubscribeTopic", velTopic_, string("/cmd_vel"));
@@ -34,6 +35,8 @@ void SonarToCloud::onInit()
     tf_filter_ = new tf::MessageFilter<avora_msgs::SonarScanLine>(scanLine_sub_, listener_, targetFrame_, 120);
     tf_filter_->registerCallback( boost::bind(&SonarToCloud::beamCallback, this, _1) );
     velSubscriber_ = nh_.subscribe(velTopic_.c_str(), 1, &SonarToCloud::velCallback, this);
+    beamCloudPublisher_ = nh_.advertise<sensor_msgs::PointCloud2>(beamCloudPublishTopic_.c_str(), 1);
+
     // Depending on the mode selected we subscribe advertise the topic needed
     // and initialise the corresponding variables
     if (mode_.find("LASER") != -1) laserInit();
@@ -118,6 +121,8 @@ bool SonarToCloud::newAngle(avora_msgs::SonarScanLineConstPtr scan, avora_msgs::
 void SonarToCloud::beamCallback(avora_msgs::SonarScanLineConstPtr scanLine){
     pcl::PointXYZI pclPoint;
     geometry_msgs::PointStamped geometryPoint;
+    intensityCloud beamCloud;
+    sensor_msgs::PointCloud2 rosBeamCloud;
     //NODELET_INFO("BeamCallback");
     if (mode_.find("LASER") != -1){
         //NODELET_INFO("Mode Laser Scan size %d", scanSize_);
@@ -258,12 +263,18 @@ void SonarToCloud::beamCallback(avora_msgs::SonarScanLineConstPtr scanLine){
             if(pclPoint.z > heightLimit_) continue;
 
             sonarCloud_->push_back(pclPoint);
+            beamCloud.push_back(pclPoint);
             sonarCloudSize_++;
         }
         sonarCloudNBeams_++;
     }
     oldScanLine_ = boost::make_shared<avora_msgs::SonarScanLine>(*scanLine);
     oldStamp_ = scanLine->header.stamp.toSec();
+
+    pcl::toROSMsg(beamCloud,rosBeamCloud);
+    rosBeamCloud.header.frame_id = sonarCloud_->header.frame_id;
+    rosBeamCloud.header.stamp = ros::Time::now();
+    beamCloudPublisher_.publish(rosBeamCloud);
 
 }
 //Now that we have the sonar cloud in "sonarCloud" we convert it to a ROS message and publish it

@@ -1,4 +1,0 @@
-mode: 'SONARCONT'
-scanSize: 120
-sonarSubscribeTopic: '/charle/sonar'
-targetFrame: 'odom'

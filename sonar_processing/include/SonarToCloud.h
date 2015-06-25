@@ -54,7 +54,9 @@ namespace sonar_processing
         //Publishers and subscribers
         ros::Subscriber beamSubscriber_;
 	    ros::Publisher laserCloudPublisher_;
-		ros::Publisher sonarCloudPublisher_;
+        ros::Publisher sonarCloudPublisher_;
+        ros::Publisher beamCloudPublisher_;
+
         ros::Subscriber velSubscriber_;
 
 		
@@ -65,7 +67,8 @@ namespace sonar_processing
         //Topic names
         string sonarSubscribeTopic_;
 		string sonarCloudPublishTopic_;
-		string laserCloudPublishTopic_;
+        string laserCloudPublishTopic_;
+        string beamCloudPublishTopic_;
         string scanFlagTopic_;
         string velTopic_;
 		
