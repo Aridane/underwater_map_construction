@@ -29,7 +29,7 @@ namespace sonar_processing
         double minThresholdProportion_;
         double OTSUMultiplier_;
         int minThresholdValue_;
-
+        bool keepOrganized_;
         int maxBinValue_;
 
         avora_msgs::StampedIntensityCloud stampedCloudMsg_;
@@ -37,6 +37,7 @@ namespace sonar_processing
         //Publishers and subscribers
         ros::Subscriber cloudSubscriber_;
         ros::Publisher cloudPublisher_;
+        ros::Publisher rosCloudPublisher_;
 
         //Topic names
         string cloudSubscribeTopic_;

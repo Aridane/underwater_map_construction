@@ -4,13 +4,154 @@
 <!-- |    EDITING THIS FILE BY HAND IS NOT RECOMMENDED                                 | -->
 <!-- =================================================================================== -->
 <robot name="charle_xacro" xmlns:controller="http://playerstage.sourceforge.net/gazebo/xmlschema/#controller" xmlns:interface="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface" xmlns:sensor="http://playerstage.sourceforge.net/gazebo/xmlschema/#sensor" xmlns:xacro="http://www.ros.org/wiki/xacro">
-  <!--<xacro:include filename="$(find erratic_description)/urdf/erratic_hokuyo_laser.xacro" />-->
-  <!-- BASE LASER ATTACHMENT -->
-  <!--<erratic_hokuyo_laser parent="sonarDato">
-  		<origin xyz="0.0 0 0.0" rpy="0 0 0" />
-  	</erratic_hokuyo_laser>
-
-   -->
+  <gazebo reference="base_link">
+    <material>Gazebo/Red</material>
+  </gazebo>
+  <gazebo reference="thuster_1">
+    <material>Gazebo/Black</material>
+  </gazebo>
+  <gazebo reference="thruster_2">
+    <material>Gazebo/Black</material>
+  </gazebo>
+  <gazebo>
+    <plugin filename="libavora_diffdrive_plugin.so" name="differential_drive_controller">
+      <alwaysOn>true</alwaysOn>
+      <update>10</update>
+      <updateRate>10</updateRate>
+      <leftJoint>base_to_thruster_1</leftJoint>
+      <rightJoint>base_to_thruster_2</rightJoint>
+      <wheelSeparation>0.33</wheelSeparation>
+      <wheelDiameter>0.1</wheelDiameter>
+      <torque>100</torque>
+      <error>-0.3</error>
+      <!--<interface:position name="position_iface_0"></interface:position>-->
+      <topicName>cmd_vel</topicName>
+    </plugin>
+  </gazebo>
+  <gazebo reference="link">
+    <material>Gazebo/GrassFloor</material>
+  </gazebo>
+  <!-- materials -->
+  <gazebo reference="base_link">
+    <material>Gazebo/Red</material>
+  </gazebo>
+  <gazebo reference="sonar">
+    <material>Gazebo/Red</material>
+  </gazebo>
+  <!-- ros_control plugin -->
+  <gazebo>
+    <plugin filename="libgazebo_ros_control.so" name="gazebo_ros_control">
+      <robotNamespace>/charle</robotNamespace>
+    </plugin>
+  </gazebo>
+  <transmission name="tran1">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="sonar_to_base_link">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="sonar_to_base_link">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+  <gazebo reference="sonar_to_base_link">
+    <material>Gazebo/Red</material>
+  </gazebo>
+  <!-- hokuyo -->
+  <gazebo reference="sonarDato">
+    <sensor name="imaging_sonar_sensor" type="imaging_sonar">
+      <pose>0 0 0 0 0 0</pose>
+      <visualize>false</visualize>
+      <update_rate>30</update_rate>
+      <sonar>
+        <min>0</min>
+        <max>50</max>
+        <step>3</step>
+        <radius>2.62</radius>
+        <opening>3</opening>
+        <binCount>500</binCount>
+      </sonar>
+      <!--<plugin name="gazebo_ros_head_sonar_controller" filename="libgazebo_ros_sonar.so">
+        <topicName>/charle/sonar</topicName>
+        <frameName>sonarDato</frameName>
+        <step>3</step>
+        <binCount>500</binCount>
+      </plugin>-->
+    </sensor>
+  </gazebo>
+  <gazebo reference="laserDato">
+    <sensor name="head_hokuyo_sensor" type="gpu_ray">
+      <pose>0 0 0 0 0 0</pose>
+      <visualize>false</visualize>
+      <update_rate>30</update_rate>
+      <ray>
+        <scan>
+          <horizontal>
+            <samples>120</samples>
+            <resolution>1</resolution>
+            <min_angle>0</min_angle>
+            <max_angle>6.283</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.3</min>
+          <max>50</max>
+          <resolution>0.3</resolution>
+        </range>
+        <!-- <noise>
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.01</stddev>
+        </noise>-->
+      </ray>
+      <plugin filename="libgazebo_ros_gpu_laser.so" name="gazebo_ros_head_hokuyo_controller">
+        <topicName>/charle/laser</topicName>
+        <frameName>laserDato</frameName>
+        <step>3</step>
+        <decay>100</decay>
+        <binCount>500</binCount>
+      </plugin>
+    </sensor>
+  </gazebo>
+  <gazebo reference="head">
+    <sensor name="camera1" type="camera">
+      <update_rate>30.0</update_rate>
+      <camera name="head">
+        <horizontal_fov>1.3962634</horizontal_fov>
+        <image>
+          <width>800</width>
+          <height>800</height>
+          <format>R8G8B8</format>
+        </image>
+        <clip>
+          <near>0.02</near>
+          <far>300</far>
+        </clip>
+        <noise>
+          <type>gaussian</type>
+          <!-- Noise is sampled independently per pixel on each frame.  
+               That pixel's noise value is added to each of its color
+               channels, which at that point lie in the range [0,1]. -->
+          <mean>0.0</mean>
+          <stddev>0.007</stddev>
+        </noise>
+      </camera>
+      <plugin filename="libgazebo_ros_camera.so" name="camera_controller">
+        <alwaysOn>true</alwaysOn>
+        <updateRate>0.0</updateRate>
+        <cameraName>robot/camera1</cameraName>
+        <imageTopicName>image_raw</imageTopicName>
+        <cameraInfoTopicName>camera_info</cameraInfoTopicName>
+        <frameName>camera_link</frameName>
+        <hackBaseline>0.07</hackBaseline>
+        <distortionK1>0.0</distortionK1>
+        <distortionK2>0.0</distortionK2>
+        <distortionK3>0.0</distortionK3>
+        <distortionT1>0.0</distortionT1>
+        <distortionT2>0.0</distortionT2>
+      </plugin>
+    </sensor>
+  </gazebo>
   <link name="base_footprint">
     <visual>
       <geometry>
@@ -23,10 +164,6 @@
         <box size="0.2 .3 0.1"/>
       </geometry>
     </collision>
-    <inertial>
-      <mass value="0.0001"/>
-      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
-    </inertial>
   </link>
   <gazebo reference="base_footprint">
     <material>Gazebo/Green</material>
@@ -53,11 +190,10 @@
       </geometry>
     </collision>
     <inertial>
-      <mass value="0.5"/>
-      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+      <mass value="0.1"/>
+      <inertia ixx="1" ixy="0.0" ixz="0.0" iyy="1" iyz="0.0" izz="1"/>
     </inertial>
   </link>
-  <!-- thrusters -->
   <joint name="base_to_thruster_1" type="continuous">
     <parent link="base_link"/>
     <child link="thruster_1"/>
@@ -78,8 +214,8 @@
       </geometry>
     </collision>
     <inertial>
-      <mass value="0.5"/>
-      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+      <mass value="0.1"/>
+      <inertia ixx="1" ixy="0.0" ixz="0.0" iyy="1" iyz="0.0" izz="1"/>
     </inertial>
   </link>
   <joint name="base_to_thruster_2" type="continuous">
@@ -102,11 +238,10 @@
       </geometry>
     </collision>
     <inertial>
-      <mass value="0.5"/>
-      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+      <mass value="0.1"/>
+      <inertia ixx="1" ixy="0.0" ixz="0.0" iyy="1" iyz="0.0" izz="1"/>
     </inertial>
   </link>
-  <!--  -->
   <joint name="sonar_to_base_link" type="revolute">
     <parent link="base_link"/>
     <child link="sonar"/>
@@ -130,14 +265,14 @@
       </geometry>
     </collision>
     <inertial>
-      <mass value="0.5"/>
-      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+      <mass value="0.01"/>
+      <inertia ixx="1" ixy="0.0" ixz="0.0" iyy="1" iyz="0.0" izz="0.001"/>
     </inertial>
   </link>
   <joint name="sonarDato_to_sonar" type="fixed">
     <parent link="sonar"/>
     <child link="sonarDato"/>
-    <origin rpy="1.57 0 0" xyz="-0.0 -0.075 -0.02"/>
+    <origin rpy="0 0 0" xyz="-0.0 -0.075 -0.02"/>
   </joint>
   <link name="sonarDato">
     <visual>
@@ -149,11 +284,20 @@
         <color rgba="0 0 .8 1"/>
       </material>
     </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.02" radius="0.02"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.1"/>
+      <inertia ixx="1" ixy="0.0" ixz="0.0" iyy="1" iyz="0.0" izz="1"/>
+    </inertial>
   </link>
   <joint name="laserDato_to_sonar" type="fixed">
     <parent link="sonar"/>
     <child link="laserDato"/>
-    <origin rpy="1.57 3.14 3.14" xyz="-0.0 -0.075 -0.02"/>
+    <origin rpy="1.57 0 0" xyz="-0.0 -0.075 -0.02"/>
   </joint>
   <link name="laserDato">
     <visual>
@@ -186,12 +330,12 @@
   </link>
   <joint name="head_to_servo_head" type="revolute">
     <parent link="servo_head"/>
-    <child link="head"/>
+    <child link="head_link"/>
     <origin rpy="0 0 3.14" xyz="0 0 0.04"/>
     <axis xyz="0 0 1"/>
     <limit effort="1000.0" lower="0.8" upper="2.4" velocity="0.5"/>
   </joint>
-  <link name="head">
+  <link name="head_link">
     <visual>
       <origin rpy="1.54 0 -1.54" xyz="0 0 0"/>
       <geometry>
@@ -202,31 +346,5 @@
       </material>
     </visual>
   </link>
-  <!--
-	<gazebo reference="thuster_1">
-  		<material>Erratic/Black</material>
- 	</gazebo>
-
- 	<gazebo reference="thruster_2">
-  		<material>Erratic/Black</material>
-	</gazebo>
-
-
-	<gazebo>
-	 		<controller:diffdrive_plugin name="differential_drive_controller" plugin="libavora_diffdrive_plugin.so">
-	    		<alwaysOn>true</alwaysOn>
-	    		<update>10</update>
-	    		<updateRate>10</updateRate>
-	    		<leftJoint>base_to_thruster_1</leftJoint>
-	    		<rightJoint>base_to_thruster_2</rightJoint>
-	    		<wheelSeparation>0.33</wheelSeparation>
-	    		<wheelDiameter>0.1</wheelDiameter>
-	     		<torque>100</torque>
-	     		<interface:position name="position_iface_0"/>
-	 		<topicName>cmd_vel</topicName>
-		</controller:diffdrive_plugin>
-
-	</gazebo>
--->
 </robot>
 

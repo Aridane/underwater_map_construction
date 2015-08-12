@@ -528,7 +528,7 @@ double ICP::registration(intensityCloud::Ptr P, std::vector<BlockInfo>* Y, std::
     int slopeBegin = 0;
     int lineBegin = 0;
 
-    while (i < ySize){
+    /*while (i < ySize){
         if (timeStamps.at(i) < 0){
             if ((moving == true) && (errorsX.size() > 0)){
                             // Calculate movement with dinamic data
@@ -657,16 +657,16 @@ double ICP::registration(intensityCloud::Ptr P, std::vector<BlockInfo>* Y, std::
                     errorsX.clear();
                     errorsY.clear();
                     errorsZ.clear();
-    }
+    }*/
     //(*T)[0] += totalLinearTranslation[0];
     //(*T)[1] += totalLinearTranslation[1];
     //(*T)[2] += totalLinearTranslation[2];
 
 
-/*
 
 
-    slopeX = slope(positiveStamps,errorsX);
+
+    /*slopeX = slope(positiveStamps,errorsX);
     slopeY = slope(positiveStamps,errorsY);
     slopeZ = slope(positiveStamps,errorsZ);
 
@@ -701,9 +701,9 @@ double ICP::registration(intensityCloud::Ptr P, std::vector<BlockInfo>* Y, std::
     //(*T)[1] = slopeY * positiveStamps.back();
     //(*T)[2] = slopeZ * positiveStamps.back();
 
-    //(*T)[0] = centroidY.x - centroidP.x;
-    //(*T)[1] = centroidY.y - centroidP.y;
-    //(*T)[2] = centroidY.z - centroidP.z;
+    (*T)[0] = centroidY.x - centroidP.x;
+    (*T)[1] = centroidY.y - centroidP.y;
+    (*T)[2] = centroidY.z - centroidP.z;
 
     //(*T)[0] /= ySize;
     //(*T)[1] /= ySize;

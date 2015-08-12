@@ -108,13 +108,8 @@ void GazeboRosTricycleDrive::Load ( physics::ModelPtr _parent, sdf::ElementPtr _
     odomOptions["world"] = WORLD;
     gazebo_ros_->getParameter<OdomSource> ( odom_source_, "odometrySource", odomOptions, WORLD );
 
-#if GAZEBO_MAJOR_VERSION > 2
-    joint_wheel_actuated_->SetParam ( "fmax", 0, wheel_torque_ );
-    joint_steering_->SetParam ( "fmax", 0, wheel_torque_ );
-#else
     joint_wheel_actuated_->SetMaxForce ( 0, wheel_torque_ );
     joint_steering_->SetMaxForce ( 0, wheel_torque_ );
-#endif
 
 
     // Initialize update rate stuff
@@ -240,11 +235,7 @@ void GazeboRosTricycleDrive::motorController ( double target_speed, double targe
             applied_speed = current_speed - wheel_deceleration_ * dt;
         }
     }
-#if GAZEBO_MAJOR_VERSION > 2
-    joint_wheel_actuated_->SetParam ( "vel", 0, applied_speed );
-#else
     joint_wheel_actuated_->SetVelocity ( 0, applied_speed );
-#endif
     
     double current_angle = joint_steering_->GetAngle ( 0 ).Radian();
     if(target_angle > +M_PI / 2.0) target_angle =  +M_PI / 2.0;
@@ -258,17 +249,9 @@ void GazeboRosTricycleDrive::motorController ( double target_speed, double targe
         } else {
             applied_steering_speed = -steering_speed_;
         }
-#if GAZEBO_MAJOR_VERSION > 2
-      joint_steering_->SetParam ( "vel", 0, applied_steering_speed );
-#else
       joint_steering_->SetVelocity ( 0, applied_steering_speed );
-#endif
     }else {
-#if GAZEBO_MAJOR_VERSION >= 4
-      joint_steering_->SetPosition ( 0, applied_angle );
-#else
       joint_steering_->SetAngle ( 0, math::Angle ( applied_angle ) );
-#endif
     }
     //ROS_INFO ( "target: [%3.2f, %3.2f], current: [%3.2f, %3.2f], applied: [%3.2f, %3.2f/%3.2f] !", 
     //            target_speed, target_angle, current_speed, current_angle, applied_speed, applied_angle, applied_steering_speed );

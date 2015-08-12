@@ -2,35 +2,35 @@
 <robot>
 
 
-	<gazebo reference="base_link">
-    		<material>Gazebo/Red</material>
-  	</gazebo>
+  <gazebo reference="base_link">
+        <material>Gazebo/Red</material>
+    </gazebo>
 
-	<gazebo reference="thuster_1">
-  		<material>Gazebo/Black</material>
- 	</gazebo>
+  <gazebo reference="thuster_1">
+      <material>Gazebo/Black</material>
+  </gazebo>
 
- 	<gazebo reference="thruster_2">
-  		<material>Gazebo/Black</material>
-	</gazebo>
-	
-	<gazebo>
-	    <plugin name="differential_drive_controller" filename="libavora_diffdrive_plugin.so">
-	    		<alwaysOn>true</alwaysOn>
-	    		<update>10</update>
-	    		<updateRate>10</updateRate>
-	    		<leftJoint>base_to_thruster_1</leftJoint>
-	    		<rightJoint>base_to_thruster_2</rightJoint>
-	    		<wheelSeparation>0.33</wheelSeparation>
-	    		<wheelDiameter>0.1</wheelDiameter>
-	     		<torque>100</torque>
-	     		<error>-0.3</error>
-	     		<!--<interface:position name="position_iface_0"></interface:position>-->
-	 		<topicName>cmd_vel</topicName>
-		</plugin>
+  <gazebo reference="thruster_2">
+      <material>Gazebo/Black</material>
+  </gazebo>
+  
+  <gazebo>
+      <plugin name="differential_drive_controller" filename="libavora_diffdrive_plugin.so">
+          <alwaysOn>true</alwaysOn>
+          <update>10</update>
+          <updateRate>10</updateRate>
+          <leftJoint>base_to_thruster_1</leftJoint>
+          <rightJoint>base_to_thruster_2</rightJoint>
+          <wheelSeparation>0.33</wheelSeparation>
+          <wheelDiameter>0.1</wheelDiameter>
+          <torque>100</torque>
+          <error>-0.3</error>
+          <!--<interface:position name="position_iface_0"></interface:position>-->
+      <topicName>cmd_vel</topicName>
+    </plugin>
 
-	</gazebo>
-	
+  </gazebo>
+  
   <gazebo reference="link">
     <material>Gazebo/GrassFloor</material>
   </gazebo>
@@ -42,7 +42,9 @@
   <gazebo reference="sonar">
     <material>Gazebo/Red</material>
   </gazebo>
-
+  <gazebo reference="sonarDato_to_sonar">
+    <material>Gazebo/Red</material>
+  </gazebo>
   <!-- ros_control plugin -->
   <gazebo>
     <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
@@ -50,41 +52,79 @@
     </plugin>
   </gazebo>
 
-  <transmission name="tran1">
-    <type>transmission_interface/SimpleTransmission</type>
-    <joint name="sonar_to_base_link">
-    	<hardwareInterface>EffortJointInterface</hardwareInterface>
-    </joint>
-    <actuator name="sonar_to_base_link">
-      <hardwareInterface>EffortJointInterface</hardwareInterface>
-      <mechanicalReduction>1</mechanicalReduction>
-    </actuator>
-  </transmission>
-
 
   <gazebo reference="sonar_to_base_link">
     <material>Gazebo/Red</material>
   </gazebo>
- 
+
+    <gazebo reference="sonarDato">
+      <sensor type="ray" name="imaging_sonar">
+        <always_on>true</always_on>
+        <update_rate>30</update_rate>
+        <pose>0 0 0 0 0 0</pose>
+        <visualize>false</visualize>
+        <ray>
+          <scan>
+            <horizontal>
+              <samples>16</samples>
+              <resolution>1</resolution>
+              <min_angle>-0.02181661564</min_angle>
+              <max_angle> 0.02181661564</max_angle>
+            </horizontal>
+            <vertical>
+              <samples>16</samples>
+              <resolution>1</resolution>
+              <min_angle>-0.02181661564</min_angle>
+              <max_angle> 0.02181661564</max_angle>
+            </vertical>
+          </scan>
+          <range>
+            <min>0.3</min>
+            <max>50</max>
+            <resolution>0.1</resolution>
+          </range>
+        </ray>
+
+        <plugin name="gazebo_ros_sonar_controller" filename="libavora_laser_imaging_sonar_plugin.so">
+          <gaussianNoise>0.005</gaussianNoise>
+          <topicName>/charle/sonar</topicName>
+          <frameId>sonarDato</frameId>
+          <binCount>500</binCount>
+          <step>0.05235987755</step>;
+        </plugin>
+      </sensor>
+    </gazebo>
+
+
+
+
   <!-- hokuyo -->
-  <gazebo reference="sonarDato">
-    <sensor type="sonar" name="head_sonar_sensor">
-      <pose>0 0 0 0 0 0</pose>
-      <visualize>false</visualize>
-      <update_rate>30</update_rate>
+  <!--<gazebo reference="sonarDato">
+    <sensor type="imaging_sonar" name="imaging_sonar_sensor">
+      <pose>0 0 0 1.57 0 -1.57</pose>
+      <visualize>0</visualize>
+      <always_on>false</always_on>
+      <update_rate>15</update_rate>
       <sonar>
-        <min>0.3</min>
+        <min>0</min>
         <max>50</max>
-        <radius>1</radius>
+        <step>3</step>
+        <radius>2.6</radius>
+        <opening>2.5</opening>
+        <binCount>500</binCount>
       </sonar>
-      <plugin name="gazebo_ros_head_sonar_controller" filename="libgazebo_ros_sonar.so">
+      <plugin name="gazebo_ros_head_sonar_controller" filename="libavora_imaging_sonar_plugin.so">
         <topicName>/charle/sonar</topicName>
         <frameName>sonarDato</frameName>
         <step>3</step>
         <binCount>500</binCount>
       </plugin>
     </sensor>
-  </gazebo>
+  </gazebo>-->
+
+
+
+
 
   <gazebo reference="laserDato">
     <sensor type="gpu_ray" name="head_hokuyo_sensor">
@@ -104,6 +144,7 @@
           <min>0.3</min>
           <max>50</max>
           <resolution>0.3</resolution>
+
         </range>
        <!-- <noise>
           <type>gaussian</type>
@@ -121,8 +162,7 @@
     </sensor>
   </gazebo>
 
-
-
+  
   <gazebo reference="head">
     <sensor type="camera" name="camera1">
       <update_rate>30.0</update_rate>

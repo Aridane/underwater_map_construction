@@ -2,35 +2,6 @@
 Changelog for package gazebo_ros_control
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-2.4.8 (2015-03-17)
-------------------
-* Merge pull request `#244 <https://github.com/ros-simulation/gazebo_ros_pkgs/issues/244>`_ from cottsay/control-urdf-fix
-  gazebo_ros_control: add urdf to downstream catkin deps
-* Added emergency stop support.
-* Contributors: Adolfo Rodriguez Tsouroukdissian, Jim Rothrock, Scott K Logan
-
-2.4.7 (2014-12-15)
-------------------
-* move declaration for DefaultRobotHWSim to header file
-* Contributors: ipa-fxm
-
-2.4.6 (2014-09-01)
-------------------
-* Update default_robot_hw_sim.cpp
-* Reduced changes
-* Fix to work with gazebo3
-* Fix build with gazebo4 and indigo
-* Update package.xml
-  Add new maintainer.
-* Contributors: Adolfo Rodriguez Tsouroukdissian, Jose Luis Rivero, Nate Koenig, hsu
-
-2.4.5 (2014-08-18)
-------------------
-* Fix typo: GAZEBO_VERSION_MAJOR -> GAZEBO_MAJOR_VERSION
-* Port fix_build branch for indigo-devel
-  See pull request `#221 <https://github.com/ros-simulation/gazebo_ros_pkgs/issues/221>`_
-* Contributors: Jose Luis Rivero, Steven Peters
-
 2.4.4 (2014-07-18)
 ------------------
 * Update package.xml

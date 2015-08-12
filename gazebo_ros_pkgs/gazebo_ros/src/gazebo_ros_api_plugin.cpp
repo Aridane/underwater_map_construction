@@ -21,7 +21,6 @@
  */
 
 #include <gazebo/common/Events.hh>
-#include <gazebo/gazebo_config.h>
 #include "gazebo_ros_api_plugin.h"
 
 namespace gazebo
@@ -31,9 +30,7 @@ GazeboRosApiPlugin::GazeboRosApiPlugin() :
   physics_reconfigure_initialized_(false),
   world_created_(false),
   stop_(false),
-  plugin_loaded_(false),
-  pub_link_states_connection_count_(0),
-  pub_model_states_connection_count_(0)
+  plugin_loaded_(false)
 {
   robot_namespace_.clear();
 }
@@ -84,17 +81,11 @@ GazeboRosApiPlugin::~GazeboRosApiPlugin()
   // Delete Force and Wrench Jobs
   lock_.lock();
   for (std::vector<GazeboRosApiPlugin::ForceJointJob*>::iterator iter=force_joint_jobs_.begin();iter!=force_joint_jobs_.end();)
-  {
     delete (*iter);
-    iter = force_joint_jobs_.erase(iter);
-  }
   force_joint_jobs_.clear();
   ROS_DEBUG_STREAM_NAMED("api_plugin","ForceJointJobs deleted");
   for (std::vector<GazeboRosApiPlugin::WrenchBodyJob*>::iterator iter=wrench_body_jobs_.begin();iter!=wrench_body_jobs_.end();)
-  {
     delete (*iter);
-    iter = wrench_body_jobs_.erase(iter);
-  }
   wrench_body_jobs_.clear();
   lock_.unlock();
   ROS_DEBUG_STREAM_NAMED("api_plugin","WrenchBodyJobs deleted");
@@ -526,6 +517,9 @@ bool GazeboRosApiPlugin::spawnURDFModel(gazebo_msgs::SpawnModel::Request &req,
 {
   // get name space for the corresponding model plugins
   robot_namespace_ = req.robot_namespace;
+
+  // incoming robot name
+  std::string model_name = req.model_name;
 
   // incoming robot model string
   std::string model_xml = req.model_xml;
@@ -1087,50 +1081,33 @@ bool GazeboRosApiPlugin::setPhysicsProperties(gazebo_msgs::SetPhysicsProperties:
   world_->SetPaused(true);
 
   // supported updates
-  gazebo::physics::PhysicsEnginePtr pe = (world_->GetPhysicsEngine());
-  pe->SetMaxStepSize(req.time_step);
-  pe->SetRealTimeUpdateRate(req.max_update_rate);
-  pe->SetGravity(gazebo::math::Vector3(req.gravity.x,req.gravity.y,req.gravity.z));
+  gazebo::physics::PhysicsEnginePtr ode_pe = (world_->GetPhysicsEngine());
+  ode_pe->SetMaxStepSize(req.time_step);
+  ode_pe->SetRealTimeUpdateRate(req.max_update_rate);
+  ode_pe->SetGravity(gazebo::math::Vector3(req.gravity.x,req.gravity.y,req.gravity.z));
 
-  if (world_->GetPhysicsEngine()->GetType() == "ode")
-  {
-    // stuff only works in ODE right now
-    pe->SetAutoDisableFlag(req.ode_config.auto_disable_bodies);
-#if GAZEBO_MAJOR_VERSION >= 3
-    pe->SetParam("precon_iters", req.ode_config.sor_pgs_precon_iters);
-    pe->SetParam("iters", req.ode_config.sor_pgs_iters);
-    pe->SetParam("sor", req.ode_config.sor_pgs_w);
-    pe->SetParam("cfm", req.ode_config.cfm);
-    pe->SetParam("erp", req.ode_config.erp);
-    pe->SetParam("contact_surface_layer",
-        req.ode_config.contact_surface_layer);
-    pe->SetParam("contact_max_correcting_vel",
-        req.ode_config.contact_max_correcting_vel);
-    pe->SetParam("max_contacts", req.ode_config.max_contacts);
+  // stuff only works in ODE right now
+  ode_pe->SetAutoDisableFlag(req.ode_config.auto_disable_bodies);
+#if GAZEBO_MAJOR_VERSION > 2
+  ode_pe->SetParam("percon_iters", req.ode_config.sor_pgs_precon_iters);
+  ode_pe->SetParam("iters", req.ode_config.sor_pgs_iters);
+  ode_pe->SetParam("sor", req.ode_config.sor_pgs_w);
 #else
-    pe->SetSORPGSPreconIters(req.ode_config.sor_pgs_precon_iters);
-    pe->SetSORPGSIters(req.ode_config.sor_pgs_iters);
-    pe->SetSORPGSW(req.ode_config.sor_pgs_w);
-    pe->SetWorldCFM(req.ode_config.cfm);
-    pe->SetWorldERP(req.ode_config.erp);
-    pe->SetContactSurfaceLayer(req.ode_config.contact_surface_layer);
-    pe->SetContactMaxCorrectingVel(req.ode_config.contact_max_correcting_vel);
-    pe->SetMaxContacts(req.ode_config.max_contacts);
+  ode_pe->SetSORPGSPreconIters(req.ode_config.sor_pgs_precon_iters);
+  ode_pe->SetSORPGSIters(req.ode_config.sor_pgs_iters);
+  ode_pe->SetSORPGSW(req.ode_config.sor_pgs_w);
 #endif
+  ode_pe->SetWorldCFM(req.ode_config.cfm);
+  ode_pe->SetWorldERP(req.ode_config.erp);
+  ode_pe->SetContactSurfaceLayer(req.ode_config.contact_surface_layer);
+  ode_pe->SetContactMaxCorrectingVel(req.ode_config.contact_max_correcting_vel);
+  ode_pe->SetMaxContacts(req.ode_config.max_contacts);
 
-    world_->SetPaused(is_paused);
+  world_->SetPaused(is_paused);
 
-    res.success = true;
-    res.status_message = "physics engine updated";
-  }
-  else
-  {
-    /// \TODO: add support for simbody, dart and bullet physics properties.
-    ROS_ERROR("ROS set_physics_properties service call does not yet support physics engine [%s].", world_->GetPhysicsEngine()->GetType().c_str());
-    res.success = false;
-    res.status_message = "Physics engine [" + world_->GetPhysicsEngine()->GetType() + "]: set_physics_properties not supported.";
-  }
-  return res.success;
+  res.success = true;
+  res.status_message = "physics engine updated";
+  return true;
 }
 
 bool GazeboRosApiPlugin::getPhysicsProperties(gazebo_msgs::GetPhysicsProperties::Request &req,
@@ -1146,49 +1123,25 @@ bool GazeboRosApiPlugin::getPhysicsProperties(gazebo_msgs::GetPhysicsProperties:
   res.gravity.z = gravity.z;
 
   // stuff only works in ODE right now
-  if (world_->GetPhysicsEngine()->GetType() == "ode")
-  {
-    res.ode_config.auto_disable_bodies =
-      world_->GetPhysicsEngine()->GetAutoDisableFlag();
-#if GAZEBO_MAJOR_VERSION >= 3
-    res.ode_config.sor_pgs_precon_iters = boost::any_cast<int>(
-      world_->GetPhysicsEngine()->GetParam("precon_iters"));
-    res.ode_config.sor_pgs_iters = boost::any_cast<int>(
-        world_->GetPhysicsEngine()->GetParam("iters"));
-    res.ode_config.sor_pgs_w = boost::any_cast<double>(
-        world_->GetPhysicsEngine()->GetParam("sor"));
-    res.ode_config.contact_surface_layer = boost::any_cast<double>(
-      world_->GetPhysicsEngine()->GetParam("contact_surface_layer"));
-    res.ode_config.contact_max_correcting_vel = boost::any_cast<double>(
-      world_->GetPhysicsEngine()->GetParam("contact_max_correcting_vel"));
-    res.ode_config.cfm = boost::any_cast<double>(
-        world_->GetPhysicsEngine()->GetParam("cfm"));
-    res.ode_config.erp = boost::any_cast<double>(
-        world_->GetPhysicsEngine()->GetParam("erp"));
-    res.ode_config.max_contacts = boost::any_cast<int>(
-      world_->GetPhysicsEngine()->GetParam("max_contacts"));
+  res.ode_config.auto_disable_bodies = world_->GetPhysicsEngine()->GetAutoDisableFlag();
+#if GAZEBO_MAJOR_VERSION > 2
+  res.ode_config.sor_pgs_precon_iters = boost::any_cast<int>(world_->GetPhysicsEngine()->GetParam("precon_iters"));
+  res.ode_config.sor_pgs_iters = boost::any_cast<int>(world_->GetPhysicsEngine()->GetParam("iters"));
+  res.ode_config.sor_pgs_w = boost::any_cast<double>(world_->GetPhysicsEngine()->GetParam("sor"));
 #else
-    res.ode_config.sor_pgs_precon_iters = world_->GetPhysicsEngine()->GetSORPGSPreconIters();
-    res.ode_config.sor_pgs_iters = world_->GetPhysicsEngine()->GetSORPGSIters();
-    res.ode_config.sor_pgs_w = world_->GetPhysicsEngine()->GetSORPGSW();
-    res.ode_config.contact_surface_layer = world_->GetPhysicsEngine()->GetContactSurfaceLayer();
-    res.ode_config.contact_max_correcting_vel = world_->GetPhysicsEngine()->GetContactMaxCorrectingVel();
-    res.ode_config.cfm = world_->GetPhysicsEngine()->GetWorldCFM();
-    res.ode_config.erp = world_->GetPhysicsEngine()->GetWorldERP();
-    res.ode_config.max_contacts = world_->GetPhysicsEngine()->GetMaxContacts();
+ res.ode_config.sor_pgs_precon_iters = world_->GetPhysicsEngine()->GetSORPGSPreconIters();
+  res.ode_config.sor_pgs_iters = world_->GetPhysicsEngine()->GetSORPGSIters();
+  res.ode_config.sor_pgs_w = world_->GetPhysicsEngine()->GetSORPGSW();
 #endif
+  res.ode_config.contact_surface_layer = world_->GetPhysicsEngine()->GetContactSurfaceLayer();
+  res.ode_config.contact_max_correcting_vel = world_->GetPhysicsEngine()->GetContactMaxCorrectingVel();
+  res.ode_config.cfm = world_->GetPhysicsEngine()->GetWorldCFM();
+  res.ode_config.erp = world_->GetPhysicsEngine()->GetWorldERP();
+  res.ode_config.max_contacts = world_->GetPhysicsEngine()->GetMaxContacts();
 
-    res.success = true;
-    res.status_message = "GetPhysicsProperties: got properties";
-  }
-  else
-  {
-    /// \TODO: add support for simbody, dart and bullet physics properties.
-    ROS_ERROR("ROS get_physics_properties service call does not yet support physics engine [%s].", world_->GetPhysicsEngine()->GetType().c_str());
-    res.success = false;
-    res.status_message = "Physics engine [" + world_->GetPhysicsEngine()->GetType() + "]: get_physics_properties not supported.";
-  }
-  return res.success;
+  res.success = true;
+  res.status_message = "GetPhysicsProperties: got properties";
+  return true;
 }
 
 bool GazeboRosApiPlugin::setJointProperties(gazebo_msgs::SetJointProperties::Request &req,
@@ -1212,43 +1165,58 @@ bool GazeboRosApiPlugin::setJointProperties(gazebo_msgs::SetJointProperties::Req
   {
     for(unsigned int i=0;i< req.ode_joint_config.damping.size();i++)
       joint->SetDamping(i,req.ode_joint_config.damping[i]);
-#if GAZEBO_MAJOR_VERSION >= 4
     for(unsigned int i=0;i< req.ode_joint_config.hiStop.size();i++)
+#if GAZEBO_MAJOR_VERSION > 2
       joint->SetParam("hi_stop",i,req.ode_joint_config.hiStop[i]);
+#else
+      joint->SetAttribute("hi_stop",i,req.ode_joint_config.hiStop[i]);
+#endif
     for(unsigned int i=0;i< req.ode_joint_config.loStop.size();i++)
+#if GAZEBO_MAJOR_VERSION > 2
       joint->SetParam("lo_stop",i,req.ode_joint_config.loStop[i]);
+#else
+      joint->SetAttribute("lo_stop",i,req.ode_joint_config.loStop[i]);
+#endif
     for(unsigned int i=0;i< req.ode_joint_config.erp.size();i++)
+#if GAZEBO_MAJOR_VERSION > 2
       joint->SetParam("erp",i,req.ode_joint_config.erp[i]);
+#else
+      joint->SetAttribute("erp",i,req.ode_joint_config.erp[i]);
+#endif
     for(unsigned int i=0;i< req.ode_joint_config.cfm.size();i++)
+#if GAZEBO_MAJOR_VERSION > 2
       joint->SetParam("cfm",i,req.ode_joint_config.cfm[i]);
+#else
+      joint->SetAttribute("cfm",i,req.ode_joint_config.cfm[i]);
+#endif
     for(unsigned int i=0;i< req.ode_joint_config.stop_erp.size();i++)
+#if GAZEBO_MAJOR_VERSION > 2
       joint->SetParam("stop_erp",i,req.ode_joint_config.stop_erp[i]);
+#else
+      joint->SetAttribute("stop_erp",i,req.ode_joint_config.stop_erp[i]);
+#endif
     for(unsigned int i=0;i< req.ode_joint_config.stop_cfm.size();i++)
+#if GAZEBO_MAJOR_VERSION > 2
       joint->SetParam("stop_cfm",i,req.ode_joint_config.stop_cfm[i]);
+#else
+      joint->SetAttribute("stop_cfm",i,req.ode_joint_config.stop_cfm[i]);
+#endif
     for(unsigned int i=0;i< req.ode_joint_config.fudge_factor.size();i++)
+#if GAZEBO_MAJOR_VERSION > 2
       joint->SetParam("fudge_factor",i,req.ode_joint_config.fudge_factor[i]);
+#else
+      joint->SetAttribute("fudge_factor",i,req.ode_joint_config.fudge_factor[i]);
+#endif
     for(unsigned int i=0;i< req.ode_joint_config.fmax.size();i++)
+#if GAZEBO_MAJOR_VERSION > 2
       joint->SetParam("fmax",i,req.ode_joint_config.fmax[i]);
+#else
+      joint->SetAttribute("fmax",i,req.ode_joint_config.fmax[i]);
+#endif
     for(unsigned int i=0;i< req.ode_joint_config.vel.size();i++)
+#if GAZEBO_MAJOR_VERSION > 2
       joint->SetParam("vel",i,req.ode_joint_config.vel[i]);
 #else
-    for(unsigned int i=0;i< req.ode_joint_config.hiStop.size();i++)
-      joint->SetAttribute("hi_stop",i,req.ode_joint_config.hiStop[i]);
-    for(unsigned int i=0;i< req.ode_joint_config.loStop.size();i++)
-      joint->SetAttribute("lo_stop",i,req.ode_joint_config.loStop[i]);
-    for(unsigned int i=0;i< req.ode_joint_config.erp.size();i++)
-      joint->SetAttribute("erp",i,req.ode_joint_config.erp[i]);
-    for(unsigned int i=0;i< req.ode_joint_config.cfm.size();i++)
-      joint->SetAttribute("cfm",i,req.ode_joint_config.cfm[i]);
-    for(unsigned int i=0;i< req.ode_joint_config.stop_erp.size();i++)
-      joint->SetAttribute("stop_erp",i,req.ode_joint_config.stop_erp[i]);
-    for(unsigned int i=0;i< req.ode_joint_config.stop_cfm.size();i++)
-      joint->SetAttribute("stop_cfm",i,req.ode_joint_config.stop_cfm[i]);
-    for(unsigned int i=0;i< req.ode_joint_config.fudge_factor.size();i++)
-      joint->SetAttribute("fudge_factor",i,req.ode_joint_config.fudge_factor[i]);
-    for(unsigned int i=0;i< req.ode_joint_config.fmax.size();i++)
-      joint->SetAttribute("fmax",i,req.ode_joint_config.fmax[i]);
-    for(unsigned int i=0;i< req.ode_joint_config.vel.size();i++)
       joint->SetAttribute("vel",i,req.ode_joint_config.vel[i]);
 #endif
 
@@ -1287,13 +1255,8 @@ bool GazeboRosApiPlugin::setModelState(gazebo_msgs::SetModelState::Request &req,
 
       //std::cout << " debug : " << relative_entity->GetName() << " : " << frame_pose << " : " << target_pose << std::endl;
       //target_pose = frame_pose + target_pose; // seems buggy, use my own
-      target_pose.pos = model->GetWorldPose().pos + frame_rot.RotateVector(target_pos);
+      target_pose.pos = frame_pos + frame_rot.RotateVector(target_pos);
       target_pose.rot = frame_rot * target_pose.rot;
-
-      // Velocities should be commanded in the requested reference
-      // frame, so we need to translate them to the world frame
-      target_pos_dot = frame_rot.RotateVector(target_pos_dot);
-      target_rot_dot = frame_rot.RotateVector(target_rot_dot);
     }
     /// @todo: FIXME map is really wrong, need to use tf here somehow
     else if (req.model_state.reference_frame == "" || req.model_state.reference_frame == "world" || req.model_state.reference_frame == "map" || req.model_state.reference_frame == "/map" )
@@ -1742,7 +1705,7 @@ void GazeboRosApiPlugin::wrenchBodySchedulerSlot()
       iter = wrench_body_jobs_.erase(iter);
     }
     else
-      ++iter;
+      iter++;
   }
   lock_.unlock();
 }
@@ -1772,7 +1735,7 @@ void GazeboRosApiPlugin::forceJointSchedulerSlot()
       iter = force_joint_jobs_.erase(iter);
     }
     else
-      ++iter;
+      iter++;
   }
   lock_.unlock();
 }

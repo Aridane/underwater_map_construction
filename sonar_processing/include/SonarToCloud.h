@@ -46,6 +46,9 @@ namespace sonar_processing
 		int sonarCloudNBeams_;
         int laserCloudNBeams_;
 		int scanSize_;
+        int dispersedPoints_;
+        double horizontalOpening_;
+        double verticalOpening_;
 
         avora_msgs::StampedIntensityCloud stampedCloudMsg_;
 		vector<double> scanAngles;
@@ -88,6 +91,7 @@ namespace sonar_processing
         double lastTime_;
         double time_;
         double oldStamp_;
+        bool keepOrganized_;
 
 	public:
 		virtual void onInit();

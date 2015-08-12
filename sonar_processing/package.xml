@@ -77,6 +77,8 @@
 
 	<nodelet plugin="${prefix}/plugins/SonarToCloud_nodelet_plugins.xml" />
 	<nodelet plugin="${prefix}/plugins/Thresholder_nodelet_plugins.xml" />
+        <nodelet plugin="${prefix}/plugins/OutlierRemover_nodelet_plugins.xml" />
+        <nodelet plugin="${prefix}/plugins/Wall2DDetector_nodelet_plugins.xml" />
 
     <!-- You can specify that this package is a metapackage here: -->
     <!-- <metapackage/> -->

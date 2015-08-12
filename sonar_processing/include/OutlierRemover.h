@@ -10,6 +10,8 @@
 #include <pcl/PCLPointCloud2.h>
 #include <string>
 
+#include <avora_msgs/StampedIntensityCloud.h>
+
 #include <pcl/filters/statistical_outlier_removal.h>
 #include <pcl/filters/radius_outlier_removal.h>
 
@@ -24,10 +26,17 @@ namespace sonar_processing
     private:
         //Parameters
         string mode_; //OTSU[PROPORTIONAL], FIXED, PROPORTIONAL, MEAN
+        avora_msgs::StampedIntensityCloud stampedCloudMsg_;
+        int minNeighbours_;
+        double minRadius_;
+        int meanK_;
+        double stddevMulThresh_;
+        bool keepOrganized_;
 
         //Publishers and subscribers
         ros::Subscriber cloudSubscriber_;
         ros::Publisher cloudPublisher_;
+        ros::Publisher rosCloudPublisher_;
 
         //Topic names
         string cloudSubscribeTopic_;
@@ -40,8 +49,8 @@ namespace sonar_processing
         OutlierRemover();
         ~OutlierRemover();
 
-        void cloudCallback(sensor_msgs::PointCloud2ConstPtr cloudMessagePtr);
+        void cloudCallback(avora_msgs::StampedIntensityCloudPtr cloudMessagePtr);
         void removeOutliersFromCloud(intensityCloud::Ptr cloudPtr);
-        void publishCloud(intensityCloud::Ptr cloudPtr);
+        void publishCloud(intensityCloud::Ptr cloudPtr, std::vector<double> timeStamps);
     };
 };

@@ -42,10 +42,10 @@ private:
     //ANNkd_tree* kdTree;
 public:
 	MLSM();
-    MLSM(double resolution, double sizeXMeters, double sizeYMeters, double verticalElasticity);
+    MLSM(double resolution, double sizeXMeters, double sizeYMeters);
 	~MLSM();
 	//Restart with given paraMeters
-    void init(double resolution, double sizeXMeters, double sizeYMeters, double verticalElasticity);
+    void init(double resolution, double sizeXMeters, double sizeYMeters);
 
     int getSpanX();
     int getSpanY();

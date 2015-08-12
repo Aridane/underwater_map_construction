@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<launch>
+	<node pkg="nodelet" type="nodelet" args="manager" name="wall2DManager_nodelet" output="screen"/>
+	
+<rosparam param="Wall2DDetectorNodelet" file="$(find sonar_processing)/yaml/Wall2DDetector_default.yaml"/>
+	<node pkg="nodelet" type="nodelet" name="Wall2DDetectorNodelet" 
+		args="load sonar_processing/Wall2DDetector wall2DManager_nodelet" output="screen">	
+		<rosparam command="load" file="$(find sonar_processing)/yaml/Wall2DDetector_default.yaml"/>
+	</node>
+</launch>

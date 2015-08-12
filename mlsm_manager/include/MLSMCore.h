@@ -40,7 +40,6 @@ private:
 	double sizeXMeters_;
 	double sizeYMeters_;
 	bool fastUpdate_;
-    double verticalElasticity_;
     geometry_msgs::Twist meanVelocity_;
     geometry_msgs::Pose poseChange_;
     geometry_msgs::Pose oldPose_;

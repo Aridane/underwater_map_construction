@@ -16,7 +16,7 @@ MLSM::~MLSM() {
 
 }
 
-MLSM::MLSM(double resolution, double sizeXMeters, double sizeYMeters, double verticalElasticity) {
+MLSM::MLSM(double resolution, double sizeXMeters, double sizeYMeters) {
     kdtree_ = kd_create(2);
     resolution_ = resolution;
     sizeXMeters_ = sizeXMeters;
@@ -25,10 +25,9 @@ MLSM::MLSM(double resolution, double sizeXMeters, double sizeYMeters, double ver
     spanY_ = sizeYMeters / resolution;
     grid_ = boost::make_shared<QuadGrid>(
                 QuadGrid(spanX_, spanY_, spanX_, spanY_));
-    verticalElasticity_ = verticalElasticity;
 }
 
-void MLSM::init(double resolution, double sizeXMeters, double sizeYMeters, double verticalElasticity) {
+void MLSM::init(double resolution, double sizeXMeters, double sizeYMeters) {
     kdtree_ = kd_create(2);
     resolution_ = resolution;
     sizeXMeters_ = sizeXMeters;
@@ -37,7 +36,6 @@ void MLSM::init(double resolution, double sizeXMeters, double sizeYMeters, doubl
     spanY_ = sizeYMeters / resolution;
     grid_ = boost::make_shared<QuadGrid>(
                 QuadGrid(spanX_, spanY_, spanX_, spanY_));
-    verticalElasticity_ = verticalElasticity;
     ROS_INFO("INIT: Resolution %f sizeXM %f sizeYM %f",resolution_,sizeXMeters_,sizeYMeters_);
 
 }

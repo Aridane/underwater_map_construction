@@ -17,9 +17,6 @@ MLSMCore::MLSMCore(ros::NodeHandle* n):
     nh.param("speedError", speedError_, double(0));
 
 
-
-
-    nh.param("verticalElasticity", verticalElasticity_, double(0));
     int maxIterations;
     double errorThreshold;
     int nSamples;
@@ -34,7 +31,7 @@ MLSMCore::MLSMCore(ros::NodeHandle* n):
     ROS_INFO("Map params\n\tResolution %f sizeXM %f sizeYM %f\n\t Max Iterationr: %d nSamples: %d",resolution_,sizeXMeters_,sizeYMeters_,maxIterations, nSamples);
 
     matching_ = false;
-    map_.init(resolution_,sizeXMeters_,sizeYMeters_, verticalElasticity_);
+    map_.init(resolution_,sizeXMeters_,sizeYMeters_);
 
 	cloudSubscriber_ = n->subscribe(cloudSubscribeTopic_.c_str(), 0, &MLSMCore::cloudCallback, this);
     markerPublisher_ = n->advertise<visualization_msgs::MarkerArray>(markerPublishTopic_.c_str(), 0);

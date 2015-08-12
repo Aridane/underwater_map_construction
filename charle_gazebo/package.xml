@@ -46,7 +46,7 @@
   
 
   <run_depend>gazebo_ros</run_depend>
-  <run_depend>gazebo_plguins</run_depend>
+  <run_depend>gazebo_plugins</run_depend>
   <run_depend>tf</run_depend>
 
 

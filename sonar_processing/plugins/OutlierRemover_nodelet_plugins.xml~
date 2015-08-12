@@ -1,0 +1,7 @@
+<library path="lib/libOutlierRemover_nodelet">
+  <class name="sonar_processing/OutlierRemover" type="sonar_processing::OutilerRemover" base_class_type="nodelet::Nodelet">
+	  <description>
+	  This is the nodelet that remover outliers form the incoming point clouds.
+	  </description>
+  </class>
+</library>

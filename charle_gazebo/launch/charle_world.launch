@@ -2,13 +2,18 @@
 <launch>
 	<arg name="paused" default="false"/>
 	<arg name="use_sim_time" default="true"/>
-	<arg name="gui" default="true"/>
+	<arg name="gui" default="false"/>
 	<arg name="headless" default="false"/>
 	<arg name="debug" default="false"/>
+
+	<arg name="model" default="$(find charle_description)/urdf/charle.xacro"/>
+	<param name="robot_description" command="$(find xacro)/xacro.py $(arg model)" />
 
 	<include file="$(find gazebo_ros)/launch/empty_world.launch">
 		<!--<arg name="world_name" value="$(find charle_gazebo)/worlds/walls.world"/>-->
 		<arg name="world_name" value="$(find charle_gazebo)/worlds/taliarte.world"/>
+
+		<!--<arg name="world_name" value="$(find charle_gazebo)/worlds/walls.world"/>-->
 		<arg name="debug" value="$(arg debug)" />
 		<arg name="gui" value="$(arg gui)" />
 		<arg name="paused" value="$(arg paused)"/>
@@ -16,17 +21,21 @@
 		<arg name="headless" value="$(arg headless)"/>
 	</include>
 
-	<arg name="model" default="$(find charle_description)/urdf/charle.xacro"/>
-	<param name="robot_description" command="$(find xacro)/xacro.py $(arg model)" />
+
 	<param name="use_gui" value="$(arg gui)"/>
-<!--	<node name="charle_state_publisher" pkg="charle_description" type="charle_state_publisher" />-->
+
+	<include file="$(find charle_control)/launch/charle_control.launch" /> 
 
 	 <!-- <include file="$(find gazebo_ros)/launch/empty_world.launch">
 	    <arg name="taliarte" value="$(find charle_gazebo)/worlds/taliarte.world"/>
 
 	  </include>-->
 
-
+  <!--<node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />-->
+  <!-- convert joint states to TF transforms for rviz, etc -->
+  <!--<node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"
+    respawn="false" output="screen">
+	</node>-->
 <!--	<node name="odom" pkg="AVORA_odom" type="odom" />
 	<node name="control_roboclaw" pkg="AVORA_odom" type="control_roboclaw" />
 	
@@ -35,9 +44,9 @@
 	<node name="superficie" pkg="Sonar2Laser" type="superficie" /> -->
 
 	<!--<node name="rviz" pkg="rviz" type="rviz" args="-d $(find charle_description)/urdf.rviz"/>-->
-	<node name="urdf_spawner" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen"	args="-urdf -model robot1 -param robot_description -z 0.05"/>
+	<node name="urdf_spawner" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen"	args="-urdf -model robot1 -param robot_description -z 3"/>
 
-	<include file="$(find charle_control)/launch/charle_control.launch" />
+	<!--<include file="$(find charle_control)/launch/charle_control.launch" />-->
 
 	<node name="rviz" pkg="rviz" type="rviz" args="-d $(find charle_description)/urdf.rviz"/>
 

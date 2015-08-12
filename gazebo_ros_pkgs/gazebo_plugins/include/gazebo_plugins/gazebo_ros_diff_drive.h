@@ -81,7 +81,6 @@ namespace gazebo {
       GazeboRosDiffDrive();
       ~GazeboRosDiffDrive();
       void Load(physics::ModelPtr _parent, sdf::ElementPtr _sdf);
-      void Reset();
 
     protected:
       virtual void UpdateChild();
@@ -124,7 +123,7 @@ namespace gazebo {
       std::string odometry_topic_;
       std::string odometry_frame_;
       std::string robot_base_frame_;
-      bool publish_tf_;
+
       // Custom Callback Queue
       ros::CallbackQueue queue_;
       boost::thread callback_queue_thread_;

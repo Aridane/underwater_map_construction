@@ -27,7 +27,7 @@
 #include <boost/thread/mutex.hpp>
 #include <cv_bridge/cv_bridge.h>
 #include <image_transport/image_transport.h>
-#include <opencv2/opencv.hpp>
+#include <opencv/cv.h>
 #include <ros/advertise_options.h>
 #include <ros/callback_queue.h>
 #include <ros/ros.h>

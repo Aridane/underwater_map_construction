@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(sonar_processing)
-
+set(ROS_BUILD_TYPE Debug)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
@@ -92,7 +92,7 @@ find_package(PCL REQUIRED)
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES SonarToCloud_nodelet Thresholder_nodelet OutlierRemover_nodelet
+  LIBRARIES SonarToCloud_nodelet Thresholder_nodelet OutlierRemover_nodelet Wall2DDetector_nodelet
   CATKIN_DEPENDS avora_msgs cv_bridge image_transport roscpp sensor_msgs std_msgs nav_msgs tf nodelet pluginlib type_definitions
  # LIBRARIES sonar_processing
 #  DEPENDS system_lib
@@ -123,18 +123,11 @@ add_library(Thresholder_nodelet ${THRESHOLDER_SOURCES})
 set(OUTLIER_REMOVER_SOURCES src/OutlierRemover.cpp include/OutlierRemover.h)
 add_library(OutlierRemover_nodelet ${OUTLIER_REMOVER_SOURCES})
 
-## Declare a cpp executable
-# add_executable(sonar_processing_node src/sonar_processing_node.cpp)
-set(SCAN_PROCESSOR_SOURCES src/ScanProcessor.cpp include/ScanProcessor.h)
-add_executable(ScanProcessor ${SCAN_PROCESSOR_SOURCES})
-
 set(WALL2DDETECTOR_SOURCES src/Wall2DDetector.cpp include/Wall2DDetector.h)
-add_executable(Wall2DDetector ${WALL2DDETECTOR_SOURCES})
+add_library(Wall2DDetector_nodelet ${WALL2DDETECTOR_SOURCES})
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
-add_dependencies(Thresholder_nodelet avora_msgs_generate_messages_cpp)
-add_dependencies(ScanProcessor avora_msgs_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(sonar_processing_node
@@ -144,23 +137,23 @@ add_dependencies(ScanProcessor avora_msgs_generate_messages_cpp)
 ## Create the nodelet library
 target_link_libraries(SonarToCloud_nodelet ${catkin_LIBRARIES})
 target_link_libraries(Thresholder_nodelet ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+target_link_libraries(OutlierRemover_nodelet ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+target_link_libraries(Wall2DDetector_nodelet ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})
+
 
 add_dependencies(SonarToCloud_nodelet avora_msgs_generate_messages_cpp)
-#add_dependencies(Thresholder_nodelet avora_msgs_generate_messages_cpp)
+add_dependencies(Thresholder_nodelet avora_msgs_generate_messages_cpp)
+add_dependencies(OutlierRemover_nodelet avora_msgs_generate_messages_cpp)
+add_dependencies(Wall2DDetector_nodelet avora_msgs_generate_messages_cpp)
 
 if(catkin_EXPORTED_LIBRARIES)
 	add_dependencies(SonarToCloud_nodelet ${catkin_EXPORTED_LIBRARIES})
 	add_dependencies(Thresholder_nodelet ${catkin_EXPORTED_LIBRARIES})
-	add_dependencies(OutlierRemover_nodelet ${catkin_EXPORTED_LIBRARIES})
+        add_dependencies(OutlierRemover_nodelet ${catkin_EXPORTED_LIBRARIES})
+        add_dependencies(Wall2DDetector_nodelet ${catkin_EXPORTED_LIBRARIES})
 endif()
 
 
-target_link_libraries(ScanProcessor ${catkin_LIBRARIES}
-									${OpenCV_LIBRARIES}
-									${PCL_LIBRARIES})
-
-target_link_libraries(Wall2DDetector ${catkin_LIBRARIES}
-									 ${PCL_LIBRARIES})
 
 
 #############
@@ -182,6 +175,7 @@ install(TARGETS
 	SonarToCloud_nodelet
 	Thresholder_nodelet
 	OutlierRemover_nodelet
+        Wall2DDetector_nodelet
 	ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 	LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 	RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
@@ -214,7 +208,8 @@ install(DIRECTORY include/
 install(FILES
 	SonarToCloud_nodelet_plugins.xml SonarToCloud.launch SonarToCloud_default.yaml
 	Thresholder_nodelet_plugins.xml Thresholder.launch Thresholder_default.yaml
-	OutlierRemover_nodelet_plugins.xml OutlierRemover.launch OutlierRemover_default.yaml
+        OutlierRemover_nodelet_plugins.xml OutlierRemover.launch OutlierRemover_default.yaml
+        Wall2DDetector_nodelet_plugins.xml Wall2DDetector.launch Wall2DDetector_default.yaml
 	DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
 

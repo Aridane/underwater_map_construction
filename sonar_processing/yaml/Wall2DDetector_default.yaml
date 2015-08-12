@@ -1,0 +1,5 @@
+mode: RANSAC
+cloudSubscribeTopic: /sonar/scan/thresholded
+RANSACDistance: 0.1
+RANSACProbability: 0.5
+RANSACMaxIterations: 1000000

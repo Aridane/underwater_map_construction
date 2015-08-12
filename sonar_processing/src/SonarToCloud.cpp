@@ -27,6 +27,10 @@ void SonarToCloud::onInit()
     nh_.param("targetFrame",targetFrame_,string("odom"));
     nh_.param("heightLimit", heightLimit_, double(4.8));
     nh_.param("velSubscribeTopic", velTopic_, string("/cmd_vel"));
+    nh_.param("keepOrganized", keepOrganized_, bool(true));
+    nh_.param("dispersedPoints", dispersedPoints_, int(10));
+    nh_.param("verticalOpening", verticalOpening_, double(22*M_PI/180.0));
+    nh_.param("horizontalOpening", horizontalOpening_, double(2.5*M_PI/180.0));
 
 
     // Subscribe to incoming sonar data from driver
@@ -261,10 +265,26 @@ void SonarToCloud::beamCallback(avora_msgs::SonarScanLineConstPtr scanLine){
             //else pclPoint.data_c[3] = -scanLine->header.stamp.toSec();
 
             if(pclPoint.z > heightLimit_) continue;
-
-            sonarCloud_->push_back(pclPoint);
             beamCloud.push_back(pclPoint);
+
+            if ((!keepOrganized_) && (scanLine->intensities[i] <= 0)) continue;
+            sonarCloud_->push_back(pclPoint);
             sonarCloudSize_++;
+            if(!keepOrganized_){
+                for (int i=0;i<dispersedPoints_;i++){
+                    pclPoint.x = geometryPoint.point.x;// + xChange;
+                    pclPoint.y = geometryPoint.point.y;// + yChange;// + (poseChange_.position.y * (scanLine->header.stamp.toSec() - oldStamp_));
+                    pclPoint.z = geometryPoint.point.z;// + zChange;// + (poseChange_.position.z * (scanLine->header.stamp.toSec() - oldStamp_));
+                    pclPoint.intensity = scanLine->intensities[i];
+
+                    if(pclPoint.z > heightLimit_) continue;
+                    beamCloud.push_back(pclPoint);
+
+                    if ((!keepOrganized_) && (scanLine->intensities[i] <= 0)) continue;
+                    sonarCloud_->push_back(pclPoint);
+                    sonarCloudSize_++;
+                }
+            }
         }
         sonarCloudNBeams_++;
     }

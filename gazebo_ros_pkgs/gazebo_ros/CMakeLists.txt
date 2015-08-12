@@ -56,6 +56,10 @@ catkin_package(
 
 include_directories(${Boost_INCLUDE_DIRS} ${catkin_INCLUDE_DIRS} ${GAZEBO_INCLUDE_DIRS} ${SDFormat_INCLUDE_DIRS} ${TinyXML_INCLUDE_DIRS})
 
+link_directories(
+  # ${GAZEBO_LIBRARY_DIRS}
+  ${Boost_LIBRARY_DIRS})
+
 set(cxx_flags)
 foreach (item ${GAZEBO_CFLAGS})
   set(cxx_flags "${cxx_flags} ${item}")
@@ -65,8 +69,6 @@ set(ld_flags)
 foreach (item ${GAZEBO_LDFLAGS})
   set(ld_flags "${ld_flags} ${item}")
 endforeach ()
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GAZEBO_CXX_FLAGS}")
 
 ## Plugins
 add_library(gazebo_ros_api_plugin src/gazebo_ros_api_plugin.cpp)

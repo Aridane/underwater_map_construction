@@ -14,11 +14,12 @@ void Thresholder::onInit()
 
     // Get all the parameters
     nh_.param("mode", mode_, string("OTSU")); // {OTSU | FIXED}[PROPORTIONAL]
-    nh_.param("maxBinValue", maxBinValue_, int(128));
+    nh_.param("maxBinValue", maxBinValue_, int(127));
     nh_.param("OTSUMultiplier", OTSUMultiplier_, double(1.0));
     nh_.param("maxThresholdProportion", maxThresholdProportion_, double(0.5));
     nh_.param("minThresholdProportion", minThresholdProportion_, double(0.5));
-    nh_.param("minThreshold", minThresholdValue_,int(60));
+    nh_.param("minThreshold", minThresholdValue_,int(50));
+    nh_.param("keepOrganized", keepOrganized_,bool(true));
 
     nh_.param("cloudsubscribeTopic", cloudSubscribeTopic_, string("/sonar/scan/sonarCloud"));
     nh_.param("thresholdedCloudPublishTopic", thresholdedCloudPublishTopic_, string("/sonar/scan/thresholded"));
@@ -27,6 +28,7 @@ void Thresholder::onInit()
     cloudSubscriber_ = nh_.subscribe(cloudSubscribeTopic_.c_str(), 0, &Thresholder::cloudCallback, this);
     //Threhsolded cloud publisher
     cloudPublisher_ = nh_.advertise<avora_msgs::StampedIntensityCloud>(thresholdedCloudPublishTopic_.c_str(),1);
+    rosCloudPublisher_ = nh_.advertise<sensor_msgs::PointCloud2>(thresholdedCloudPublishTopic_ + "/cloud",1);
 }
 
 void Thresholder::cloudCallback(avora_msgs::StampedIntensityCloudPtr cloudMessagePtr){
@@ -48,12 +50,11 @@ void Thresholder::cloudCallback(avora_msgs::StampedIntensityCloudPtr cloudMessag
         stamps.push_back(cloudMessagePtr->timeStamps.at(i));
     }
 
-    ROS_INFO("I %lu ",extractedIndices->size());
-    ROS_INFO("C %lu ",cloudPtr->size());
-    ROS_INFO("C %lu ",cloudPtr->height);
-    ROS_INFO("C %lu ",cloudPtr->width);
-
-    ROS_INFO("S %lu ",stamps.size());
+    ROS_INFO("I %d ",(int)extractedIndices->size());
+    ROS_INFO("C %d ",(int)cloudPtr->size());
+    ROS_INFO("C %d ",(int)cloudPtr->height);
+    ROS_INFO("C %d ",(int)cloudPtr->width);
+    ROS_INFO("S %d ",(int)stamps.size());
     //}
     //Publish cloud
     publishCloud(cloudPtr, stamps);
@@ -70,7 +71,7 @@ pcl::IndicesConstPtr Thresholder::thresholdCloud(intensityCloud::Ptr cloudPtr)
         if (mode_.find("PROPOTIONAL") != -1) threshold = threshold * OTSUMultiplier_;
     } else if (mode_.find("FIXED") != -1){
         threshold = fixedThresholdValue_;
-    } if (mode_.find("PROPORTIONAL") != -1){
+    } else if (mode_.find("PROPORTIONAL") != -1){
         int maxIntensity = 0, minIntensity = maxBinValue_;
         intensityCloud::iterator cloudIterator;
         for (cloudIterator = cloudPtr->begin();cloudIterator != cloudPtr->end();cloudIterator++){
@@ -88,9 +89,11 @@ pcl::IndicesConstPtr Thresholder::thresholdCloud(intensityCloud::Ptr cloudPtr)
     // Set range of intensity values accepted
     passthroughFilter.setFilterLimits(threshold, maxBinValue_+1);
     // Keep organised setting removed points to NaN
-    passthroughFilter.setKeepOrganized(false);
+    passthroughFilter.setKeepOrganized(keepOrganized_);
     // Apply filter
     passthroughFilter.filter(*cloudPtr);
+
+
 
     pcl::IndicesConstPtr indices = passthroughFilter.getIndices();
     pcl::IndicesConstPtr extractedIndices = passthroughFilter.getRemovedIndices();
@@ -150,6 +153,7 @@ void Thresholder::publishCloud(intensityCloud::Ptr cloudPtr, std::vector<double>
     pcl::toROSMsg(*cloudPtr,stampedCloudMsg_.cloud);
     stampedCloudMsg_.header.frame_id = cloudPtr->header.frame_id;
     stampedCloudMsg_.timeStamps = timeStamps;
+    rosCloudPublisher_.publish(stampedCloudMsg_.cloud);
     cloudPublisher_.publish(stampedCloudMsg_);
 }
 

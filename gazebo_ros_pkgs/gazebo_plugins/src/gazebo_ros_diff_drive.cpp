@@ -100,23 +100,10 @@ void GazeboRosDiffDrive::Load ( physics::ModelPtr _parent, sdf::ElementPtr _sdf 
     joints_.resize ( 2 );
     joints_[LEFT] = gazebo_ros_->getJoint ( parent, "leftJoint", "left_joint" );
     joints_[RIGHT] = gazebo_ros_->getJoint ( parent, "rightJoint", "right_joint" );
-#if GAZEBO_MAJOR_VERSION > 2
-    joints_[LEFT]->SetParam ( "fmax", 0, wheel_torque );
-    joints_[RIGHT]->SetParam ( "fmax", 0, wheel_torque );
-#else
     joints_[LEFT]->SetMaxForce ( 0, wheel_torque );
     joints_[RIGHT]->SetMaxForce ( 0, wheel_torque );
-#endif
 
 
-
-    this->publish_tf_ = true;
-    if (!_sdf->HasElement("publishTf")) {
-      ROS_WARN("GazeboRosDiffDrive Plugin (ns = %s) missing <publishTf>, defaults to %d",
-          this->robot_namespace_.c_str(), this->publish_tf_);
-    } else {
-      this->publish_tf_ = _sdf->GetElement("publishTf")->Get<bool>();
-    }
 
     // Initialize update rate stuff
     if ( this->update_rate_ > 0.0 ) this->update_period_ = 1.0 / this->update_rate_;
@@ -132,7 +119,7 @@ void GazeboRosDiffDrive::Load ( physics::ModelPtr _parent, sdf::ElementPtr _sdf 
     alive_ = true;
 
 
-    if (this->publishWheelJointState_)
+    if(this->publishWheelJointState_)
     {
         joint_state_publisher_ = gazebo_ros_->node()->advertise<sensor_msgs::JointState>("joint_states", 1000);
         ROS_INFO("%s: Advertise joint_states!", gazebo_ros_->info());
@@ -151,11 +138,8 @@ void GazeboRosDiffDrive::Load ( physics::ModelPtr _parent, sdf::ElementPtr _sdf 
     cmd_vel_subscriber_ = gazebo_ros_->node()->subscribe(so);
     ROS_INFO("%s: Subscribe to %s!", gazebo_ros_->info(), command_topic_.c_str());
 
-    if (this->publish_tf_)
-    {
-      odometry_publisher_ = gazebo_ros_->node()->advertise<nav_msgs::Odometry>(odometry_topic_, 1);
-      ROS_INFO("%s: Advertise odom on %s !", gazebo_ros_->info(), odometry_topic_.c_str());
-    }
+    odometry_publisher_ = gazebo_ros_->node()->advertise<nav_msgs::Odometry>(odometry_topic_, 1);
+    ROS_INFO("%s: Advertise odom on %s !", gazebo_ros_->info(), odometry_topic_.c_str());
 
     // start custom queue for diff drive
     this->callback_queue_thread_ =
@@ -165,23 +149,6 @@ void GazeboRosDiffDrive::Load ( physics::ModelPtr _parent, sdf::ElementPtr _sdf 
     this->update_connection_ =
         event::Events::ConnectWorldUpdateBegin ( boost::bind ( &GazeboRosDiffDrive::UpdateChild, this ) );
 
-}
-
-void GazeboRosDiffDrive::Reset()
-{
-  last_update_time_ = parent->GetWorld()->GetSimTime();
-  pose_encoder_.x = 0;
-  pose_encoder_.y = 0;
-  pose_encoder_.theta = 0;
-  x_ = 0;
-  rot_ = 0;
-#if GAZEBO_MAJOR_VERSION > 2
-  joints_[LEFT]->SetParam ( "fmax", 0, wheel_torque );
-  joints_[RIGHT]->SetParam ( "fmax", 0, wheel_torque );
-#else
-  joints_[LEFT]->SetMaxForce ( 0, wheel_torque );
-  joints_[RIGHT]->SetMaxForce ( 0, wheel_torque );
-#endif
 }
 
 void GazeboRosDiffDrive::publishWheelJointState()
@@ -224,30 +191,11 @@ void GazeboRosDiffDrive::publishWheelTF()
 void GazeboRosDiffDrive::UpdateChild()
 {
   
-    /* force reset SetParam("fmax") since Joint::Reset reset MaxForce to zero at
-       https://bitbucket.org/osrf/gazebo/src/8091da8b3c529a362f39b042095e12c94656a5d1/gazebo/physics/Joint.cc?at=gazebo2_2.2.5#cl-331
-       (this has been solved in https://bitbucket.org/osrf/gazebo/diff/gazebo/physics/Joint.cc?diff2=b64ff1b7b6ff&at=issue_964 )
-       and Joint::Reset is called after ModelPlugin::Reset, so we need to set maxForce to wheel_torque other than GazeboRosDiffDrive::Reset
-       (this seems to be solved in https://bitbucket.org/osrf/gazebo/commits/ec8801d8683160eccae22c74bf865d59fac81f1e)
-    */
-    for ( int i = 0; i < 2; i++ ) {
-#if GAZEBO_MAJOR_VERSION > 2
-      if ( fabs(wheel_torque -joints_[i]->GetParam ( "fmax", 0 )) > 1e-6 ) {
-        joints_[i]->SetParam ( "fmax", 0, wheel_torque );
-#else
-      if ( fabs(wheel_torque -joints_[i]->GetMaxForce ( 0 )) > 1e-6 ) {
-        joints_[i]->SetMaxForce ( 0, wheel_torque );
-#endif
-      }
-    }
-
-
     if ( odom_source_ == ENCODER ) UpdateOdometryEncoder();
     common::Time current_time = parent->GetWorld()->GetSimTime();
     double seconds_since_last_update = ( current_time - last_update_time_ ).Double();
-
     if ( seconds_since_last_update > update_period_ ) {
-        if (this->publish_tf_) publishOdometry ( seconds_since_last_update );
+        publishOdometry ( seconds_since_last_update );
         if ( publishWheelTF_ ) publishWheelTF();
         if ( publishWheelJointState_ ) publishWheelJointState();
 
@@ -263,13 +211,8 @@ void GazeboRosDiffDrive::UpdateChild()
                 ( fabs ( wheel_speed_[LEFT] - current_speed[LEFT] ) < 0.01 ) ||
                 ( fabs ( wheel_speed_[RIGHT] - current_speed[RIGHT] ) < 0.01 ) ) {
             //if max_accel == 0, or target speed is reached
-#if GAZEBO_MAJOR_VERSION > 2
-            joints_[LEFT]->SetParam ( "vel", 0, wheel_speed_[LEFT]/ ( wheel_diameter_ / 2.0 ) );
-            joints_[RIGHT]->SetParam ( "vel", 0, wheel_speed_[RIGHT]/ ( wheel_diameter_ / 2.0 ) );
-#else
             joints_[LEFT]->SetVelocity ( 0, wheel_speed_[LEFT]/ ( wheel_diameter_ / 2.0 ) );
             joints_[RIGHT]->SetVelocity ( 0, wheel_speed_[RIGHT]/ ( wheel_diameter_ / 2.0 ) );
-#endif
         } else {
             if ( wheel_speed_[LEFT]>=current_speed[LEFT] )
                 wheel_speed_instr_[LEFT]+=fmin ( wheel_speed_[LEFT]-current_speed[LEFT],  wheel_accel * seconds_since_last_update );
@@ -284,13 +227,8 @@ void GazeboRosDiffDrive::UpdateChild()
             // ROS_INFO("actual wheel speed = %lf, issued wheel speed= %lf", current_speed[LEFT], wheel_speed_[LEFT]);
             // ROS_INFO("actual wheel speed = %lf, issued wheel speed= %lf", current_speed[RIGHT],wheel_speed_[RIGHT]);
 
-#if GAZEBO_MAJOR_VERSION > 2
-            joints_[LEFT]->SetParam ( "vel", 0, wheel_speed_instr_[LEFT] / ( wheel_diameter_ / 2.0 ) );
-            joints_[RIGHT]->SetParam ( "vel", 0, wheel_speed_instr_[RIGHT] / ( wheel_diameter_ / 2.0 ) );
-#else
             joints_[LEFT]->SetVelocity ( 0,wheel_speed_instr_[LEFT] / ( wheel_diameter_ / 2.0 ) );
             joints_[RIGHT]->SetVelocity ( 0,wheel_speed_instr_[RIGHT] / ( wheel_diameter_ / 2.0 ) );
-#endif
         }
         last_update_time_+= common::Time ( update_period_ );
     }

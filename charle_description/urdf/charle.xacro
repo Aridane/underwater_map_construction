@@ -1,12 +1,11 @@
 <?xml version="1.0"?>
-
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" 
  	xmlns:sensor="http://playerstage.sourceforge.net/gazebo/xmlschema/#sensor"
     	xmlns:controller="http://playerstage.sourceforge.net/gazebo/xmlschema/#controller"
     	xmlns:interface="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface"
 	name="charle_xacro">
 
-	<xacro:include filename="$(find charle_description)/urdf/charle.gazebo" />
+    <xacro:include filename="$(find charle_description)/urdf/charle.gazebo" />
 
 
 	<xacro:property name="length_thruster" value="0.2" />
@@ -16,7 +15,7 @@
                        <mass value="${mass}" />
                        <inertia ixx="1" ixy="0.0" ixz="0.0"
                                 iyy="1" iyz="0.0"
-                                izz="0.01" />
+                                izz="1" />
                </inertial>
 	</xacro:macro>
 
@@ -32,7 +31,6 @@
 	       				<box size="0.2 .3 0.1"/>
 				</geometry>
 			</collision>
-		<xacro:default_inertial mass="0.0001"/>
  	</link>
 
 	<gazebo reference="base_footprint">
@@ -61,7 +59,7 @@
        				<box size="0.2 .3 0.1"/>
 			</geometry>
 	 </collision>
-	 <xacro:default_inertial mass="0.5"/>
+	 <xacro:default_inertial mass="0.1"/>
   </link>
 
 
@@ -85,7 +83,7 @@
        				<cylinder length="${length_thruster}" radius="${radius_thruster}"/>
 			</geometry>
 		</collision>
-		<xacro:default_inertial mass="0.5"/>
+		<xacro:default_inertial mass="0.1"/>
  	</link>
 
 
@@ -97,21 +95,22 @@
  </joint>
 
 
- 	<link name="thruster_2">
-   		<visual>
-     			<geometry>
-       				<cylinder length="${length_thruster}" radius="${radius_thruster}"/>
-     			</geometry>
-			<!-- <origin rpy="0 1.5 0" xyz="0.1 0.1 0"/> -->
-			<origin rpy="0 0 0" xyz="0 0 0"/>
-		</visual>
-		<collision>
-			<geometry>
-       				<cylinder length="${length_thruster}" radius="${radius_thruster}"/>
-			</geometry>
-		</collision>
-		<xacro:default_inertial mass="0.5"/>
- 	</link>
+  <link name="thruster_2">
+      <visual>
+          <geometry>
+              <cylinder length="${length_thruster}" radius="${radius_thruster}"/>
+          </geometry>
+      <!-- <origin rpy="0 1.5 0" xyz="0.1 0.1 0"/> -->
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+    </visual>
+    <collision>
+      <geometry>
+              <cylinder length="${length_thruster}" radius="${radius_thruster}"/>
+      </geometry>
+    </collision>
+    <xacro:default_inertial mass="0.1"/>
+  </link>
+
 
 
   <joint name="sonar_to_base_link" type="revolute">
@@ -119,7 +118,7 @@
     <child link="sonar"/>
     <origin rpy="1.5707 0 0" xyz="-0.0 -0 -0.205"/>
     <axis xyz="1 0 0" />
-    <limit effort ="1000.0" lower="-1.57" upper="1.57" velocity="0.5"/>
+    <limit effort ="10000.0" lower="-1.57" upper="1.57" velocity="0.5"/>
   </joint>
 
   <link name="sonar">
@@ -137,33 +136,67 @@
        				<cylinder length="0.01" radius="0.03"/>
 			</geometry>
  	 </collision>
-                  <inertial>
-                       <mass value="0.01" />
-                       <inertia ixx="1" ixy="0.0" ixz="0.0"
-                                iyy="1" iyz="0.0"
-                                izz="0.001" />
+               <inertial>
+                       <mass value="1" />
+                       <inertia ixx="0" ixy="0.0" ixz="0.0"
+                                iyy="0" iyz="0.0"
+                                izz="0" />
                </inertial>
-
   </link>
 
 
-  <joint name="sonarDato_to_sonar" type="fixed">
+  <joint name="sonarDato_to_sonar" type="continuous">
     <parent link="sonar"/>
     <child link="sonarDato"/>
     <origin rpy="1.57 0 0" xyz="-0.0 -0.075 -0.02"/>
+    <axis xyz="0 0 1" />
+    <limit effort ="1000.0" velocity="1000000"/>
+
   </joint>
 
-  <link name="sonarDato">
+ <link name="sonarDato">
     <visual>
-	<origin rpy="0 0 0" xyz="-0.0 -0.0 0.0"/>
+	   <origin rpy="0 0 0" xyz="-0.0 -0.0 0.0"/>
       <geometry>
-        <cylinder length="0.02" radius="0.02"/>	
+        <cylinder length="0.01" radius="0.01"/>	
       </geometry>
       <material name="blue">
      	<color rgba="0 0 .8 1"/>
       </material>
     </visual>
+             <collision>
+      <geometry>
+              <cylinder length="0.01" radius="0.01"/>
+      </geometry>
+   </collision>
+       <xacro:default_inertial mass="0.00001"/>
   </link>
+
+
+
+
+  <transmission name="tran1">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="sonar_to_base_link">
+      <hardwareInterface>EffortJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="sonar_servo">
+       <hardwareInterface>EffortJointInterface</hardwareInterface>
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+
+  <!--<transmission name="tran2">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="sonarDato_to_sonar">
+      <hardwareInterface>PositionJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="sonarDato_servo">
+       <hardwareInterface>PositionJointInterface</hardwareInterface>
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>-->
+
 
 
   <joint name="laserDato_to_sonar" type="fixed">
@@ -174,16 +207,15 @@
 
   <link name="laserDato">
     <visual>
-	<origin rpy="0 0 0" xyz="-0.0 -0.0 0.0"/>
+  <origin rpy="0 0 0" xyz="-0.0 -0.0 0.0"/>
       <geometry>
-        <cylinder length="0.02" radius="0.02"/>	
+        <cylinder length="0.02" radius="0.02"/> 
       </geometry>
       <material name="blue">
-     	<color rgba="0 0 .8 1"/>
+      <color rgba="0 0 .8 1"/>
       </material>
     </visual>
   </link>
-
 
   <joint name="servo_head_to_base_link" type="revolute">
     <parent link="base_link"/>
@@ -208,15 +240,15 @@
 
   <joint name="head_to_servo_head" type="revolute">
     <parent link="servo_head"/>
-    <child link="head"/>
+    <child link="head_link"/>
     <origin rpy="0 0 3.14" xyz="0 0 0.04"/>
     <axis xyz="0 0 1" />
     <limit effort ="1000.0" lower="0.8" upper="2.4" velocity="0.5"/>
   </joint>
 
-  <link name="head">
+  <link name="head_link">
     <visual>
-	<origin rpy="1.54 0 -1.54" xyz="0 0 0" />
+	    <origin rpy="1.54 0 -1.54" xyz="0 0 0" />
       <geometry>
         <mesh filename="package://charle_description/urdf/AVORA_head_stl.STL" scale="0.001 0.001 0.001"/>
       </geometry>
@@ -225,4 +257,5 @@
       </material>
     </visual>
   </link>
+
 </robot>

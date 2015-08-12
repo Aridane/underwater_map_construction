@@ -125,9 +125,9 @@ void GazeboRosLaser::LoadThread()
   this->gazebo_node_->Init(this->world_name_);
 
   this->pmq.startServiceThread();
-
+  
   this->rosnode_ = new ros::NodeHandle(this->robot_namespace_);
-
+  
   this->tf_prefix_ = tf::getPrefixParam(*this->rosnode_);
   if(this->tf_prefix_.empty()) {
       this->tf_prefix_ = this->robot_namespace_;
@@ -135,7 +135,7 @@ void GazeboRosLaser::LoadThread()
   }
   ROS_INFO("GPU Laser Plugin (ns = %s) <tf_prefix_>, set to \"%s\"",
              this->robot_namespace_.c_str(), this->tf_prefix_.c_str());
-
+  
   // resolve tf prefix
   this->frame_name_ = tf::resolve(this->tf_prefix_, this->frame_name_);
 
