@@ -226,20 +226,20 @@ void SonarToCloud::beamCallback(avora_msgs::SonarScanLineConstPtr scanLine){
 
         //ROS_INFO("Change: x %f y %f z %f",xChange,yChange, zChange);
         time_ = 1;
-
+        //NODELET_INFO("Angle: %f (%f)",scanLine->angle,180.0*(scanLine->angle)/M_PI);
         for (int i=0;i<scanLine->intensities.size();i++){
             if (moving_) stampedCloudMsg_.timeStamps.push_back(scanLine->header.stamp.toSec());
             else {
                  stampedCloudMsg_.timeStamps.push_back(-scanLine->header.stamp.toSec());
             }
             geometryPoint.header = scanLine->header;
+
             geometryPoint.point.x = (i + 1) * rangeResolution * cos(scanLine->angle);
             geometryPoint.point.y = (i + 1) * rangeResolution * sin(scanLine->angle);
             geometryPoint.point.z = 0;
             // And then transform them to the robot frame, which means rotating -sensorAngle in the Y axis
             //point.x = point.x * cos(-scanLine->sensorAngle);
             // Since the rotation is aroung Y, the Y coordinate is not modified
-
             try{
                 if (targetFrame_ != scanLine->header.frame_id){
                 	listener_.transformPoint(targetFrame_, geometryPoint, geometryPoint);
@@ -251,40 +251,61 @@ void SonarToCloud::beamCallback(avora_msgs::SonarScanLineConstPtr scanLine){
                   ROS_ERROR("%s",ex.what());
                   sonarCloud_->header.frame_id = scanLine->header.frame_id;
             }
-            /*ROS_INFO("Change: x %f y %f z %f",(poseChange_.position.x * (scanLine->header.stamp.toSec() - oldStamp_)),
-                                               (poseChange_.position.y * (scanLine->header.stamp.toSec() - oldStamp_))
-                                               ,(poseChange_.position.z * (scanLine->header.stamp.toSec() - oldStamp_)));
-
-            */
-
             pclPoint.x = geometryPoint.point.x;// + xChange;
             pclPoint.y = geometryPoint.point.y;// + yChange;// + (poseChange_.position.y * (scanLine->header.stamp.toSec() - oldStamp_));
             pclPoint.z = geometryPoint.point.z;// + zChange;// + (poseChange_.position.z * (scanLine->header.stamp.toSec() - oldStamp_));
             pclPoint.intensity = scanLine->intensities[i];
             //if (moving_) pclPoint.data_c[3] = scanLine->header.stamp.toSec();
             //else pclPoint.data_c[3] = -scanLine->header.stamp.toSec();
-
             if(pclPoint.z > heightLimit_) continue;
             beamCloud.push_back(pclPoint);
-
             if ((!keepOrganized_) && (scanLine->intensities[i] <= 0)) continue;
             sonarCloud_->push_back(pclPoint);
             sonarCloudSize_++;
             if(!keepOrganized_){
-                for (int i=0;i<dispersedPoints_;i++){
+                //std::random_device rd;
+                //std::mt19937 gen(rd());
+                //std::normal_distribution<> d(5,2);
+                double auxStep = horizontalOpening_/dispersedPoints_;
+                /*NODELET_INFO("Horizontal opening: %f (%f) Dispersed points: %d Step: %f (%f)",
+                             horizontalOpening_,180.0*horizontalOpening_/M_PI
+                             , dispersedPoints_,
+                             auxStep,180.0*auxStep/M_PI);*/
+                for (int j=(-dispersedPoints_*0.5);j<=(dispersedPoints_*0.5);j++){
+                    //double halfheight = (i + 1) * rangeResolution * tan(scanLine->angle);
+                    //NODELET_INFO("j: %d Current angle: %f (%f)",j,scanLine->angle + auxStep*j,180.0*(scanLine->angle + auxStep*j)/M_PI);
+                    geometryPoint.header = scanLine->header;
+                    geometryPoint.point.x = (i + 1) * rangeResolution * cos(scanLine->angle + auxStep*j);
+                    geometryPoint.point.y = (i + 1) * rangeResolution * sin(scanLine->angle + auxStep*j);
+                    geometryPoint.point.z = 0;
+                    // And then transform them to the robot frame, which means rotating -sensorAngle in the Y axis
+                    //point.x = point.x * cos(-scanLine->sensorAngle);
+                    // Since the rotation is aroung Y, the Y coordinate is not modified
+                    try{
+                        if (targetFrame_ != scanLine->header.frame_id){
+                            listener_.transformPoint(targetFrame_, geometryPoint, geometryPoint);
+                            sonarCloud_->header.frame_id = geometryPoint.header.frame_id;
+                        }
+                        else sonarCloud_->header.frame_id = scanLine->header.frame_id;
+                    }
+                    catch (tf::TransformException &ex) {
+                          ROS_ERROR("%s",ex.what());
+                          sonarCloud_->header.frame_id = scanLine->header.frame_id;
+                    }
                     pclPoint.x = geometryPoint.point.x;// + xChange;
                     pclPoint.y = geometryPoint.point.y;// + yChange;// + (poseChange_.position.y * (scanLine->header.stamp.toSec() - oldStamp_));
                     pclPoint.z = geometryPoint.point.z;// + zChange;// + (poseChange_.position.z * (scanLine->header.stamp.toSec() - oldStamp_));
                     pclPoint.intensity = scanLine->intensities[i];
-
+                    //if (moving_) pclPoint.data_c[3] = scanLine->header.stamp.toSec();
+                    //else pclPoint.data_c[3] = -scanLine->header.stamp.toSec();
                     if(pclPoint.z > heightLimit_) continue;
                     beamCloud.push_back(pclPoint);
-
                     if ((!keepOrganized_) && (scanLine->intensities[i] <= 0)) continue;
                     sonarCloud_->push_back(pclPoint);
                     sonarCloudSize_++;
                 }
             }
+
         }
         sonarCloudNBeams_++;
     }

@@ -1,4 +1,4 @@
-cloudSubscribeTopic: '/sonar/scan/thresholded'
+cloudSubscribeTopic: '/sonar/scan/cleaned'
 markerPublishTopic: '/MLSM/Markers'
 resolution: 0.6
 sizeXMeters: 120

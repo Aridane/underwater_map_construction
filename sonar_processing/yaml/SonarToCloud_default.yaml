@@ -4,3 +4,4 @@ sonarSubscribeTopic: '/charle/sonar'
 targetFrame: 'odom'
 velSubscribeTopic: '/cmd_vel'
 keepOrganized: false
+dispersedPoints: 10
