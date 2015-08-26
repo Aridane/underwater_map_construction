@@ -410,7 +410,7 @@ double ICP::registration(intensityCloud::Ptr P, std::vector<BlockInfo>* Y, std::
 
 
     //lm.estimateRigidTransformation(pointCloud,candidatePointCloud, *correspondences,rotation);
-    ////ROS_INFO("\n \tLM Rotation \n%f %f %f\n%f %f %f\n%f %f %f",rotation(0,0),rotation(0,1),rotation(0,2),
+    //ROS_INFO("\n \tLM Rotation \n%f %f %f\n%f %f %f\n%f %f %f",rotation(0,0),rotation(0,1),rotation(0,2),
     //                                                                   rotation(1,0),rotation(1,1),rotation(1,2),
     //         rotation(2,0),rotation(2,1),rotation(2,2));
     /*pcl::PointCloud<pcl::PointXYZI>::Ptr source (new pcl::PointCloud<pcl::PointXYZI>(pointCloud));
@@ -505,12 +505,12 @@ double ICP::registration(intensityCloud::Ptr P, std::vector<BlockInfo>* Y, std::
     std::vector<double> errorsX, errorsY, errorsZ;
     double slopeX, slopeY, slopeZ;
     std::vector<double> positiveStamps;
-    //for (i=0;i<ySize;i++){
-    //    errorsX.push_back(transforms->at(i)[0]);
-    //    errorsY.push_back(transforms->at(i)[1]);
-    //    errorsZ.push_back(transforms->at(i)[2]);
-    //    positiveStamps.push_back(fabs(fabs(timeStamps.at(i))-fabs(timeStamps.front())));
-    //}
+    for (i=0;i<ySize;i++){
+        errorsX.push_back(transforms->at(i)[0]);
+        errorsY.push_back(transforms->at(i)[1]);
+        errorsZ.push_back(transforms->at(i)[2]);
+        positiveStamps.push_back(fabs(fabs(timeStamps.at(i))-fabs(timeStamps.front())));
+    }
     i = 0;
     bool moving = false;
     double tX = 0,tY = 0,tZ = 0;
@@ -528,7 +528,7 @@ double ICP::registration(intensityCloud::Ptr P, std::vector<BlockInfo>* Y, std::
     int slopeBegin = 0;
     int lineBegin = 0;
 
-    /*while (i < ySize){
+    while (i < ySize){
         if (timeStamps.at(i) < 0){
             if ((moving == true) && (errorsX.size() > 0)){
                             // Calculate movement with dinamic data
@@ -542,6 +542,7 @@ double ICP::registration(intensityCloud::Ptr P, std::vector<BlockInfo>* Y, std::
                             }
                             lineBegin = i;
                             ROS_INFO("SlopeX %f SlopeY %f Slopez %f", slopeX, slopeY, slopeZ);
+                            ROS_INFO("Total SlopeX %f SlopeY %f Slopez %f", slopeX * positiveStamps.back(), slopeY * positiveStamps.back(), slopeZ * positiveStamps.back());
                             (*T)[0] += slopeX * positiveStamps.back();
                             (*T)[1] += slopeY * positiveStamps.back();
                             (*T)[2] += slopeZ * positiveStamps.back();
@@ -565,13 +566,13 @@ double ICP::registration(intensityCloud::Ptr P, std::vector<BlockInfo>* Y, std::
             tY = (fabs(Y->at(i).blockPtr->mean_.y - P->at(i).y) < errorThreshold_) ? 0 : Y->at(i).blockPtr->mean_.y - P->at(i).y;
             tZ = (fabs(Y->at(i).blockPtr->mean_.z - P->at(i).z) < errorThreshold_) ? 0 : Y->at(i).blockPtr->mean_.z - P->at(i).z;
 
-            ROS_INFO("");
-            ROS_INFO("SPoint %d X %f Y %f Z %f",i , P->at(i).x, P->at(i).y,P->at(i).z);
-            ROS_INFO("SCandt %d X %f Y %f Z %f",i, Y->at(i).blockPtr->mean_.x, Y->at(i).blockPtr->mean_.y, Y->at(i).blockPtr->mean_.z);
-            ROS_INFO("SError %d X %f Y %f Z %f Time %f",i , tX, tY, tZ,fabs(fabs(timeStamps.at(i))-fabs(timeStamps.at(slopeBegin))));
-            linearTranslation[0] = ((samples * linearTranslation[0]) / (samples+1)) + (tX/(samples+1));
-            linearTranslation[1] = ((samples * linearTranslation[1]) / (samples+1)) + (tY/(samples+1));
-            linearTranslation[2] = ((samples * linearTranslation[2]) / (samples+1)) + (tZ/(samples+1));
+            //ROS_INFO("");
+            //ROS_INFO("SPoint %d X %f Y %f Z %f",i , P->at(i).x, P->at(i).y,P->at(i).z);
+            //ROS_INFO("SCandt %d X %f Y %f Z %f",i, Y->at(i).blockPtr->mean_.x, Y->at(i).blockPtr->mean_.y, Y->at(i).blockPtr->mean_.z);
+            //ROS_INFO("SError %d X %f Y %f Z %f Time %f",i , tX, tY, tZ,fabs(fabs(timeStamps.at(i))-fabs(timeStamps.at(slopeBegin))));
+            linearTranslation[0] = (((double)samples * linearTranslation[0]) / (samples+1.0)) + (tX/(samples+1.0));
+            linearTranslation[1] = (((double)samples * linearTranslation[1]) / (samples+1.0)) + (tY/(samples+1.0));
+            linearTranslation[2] = (((double)samples * linearTranslation[2]) / (samples+1.0) + (tZ/(samples+1.0));
 
             samples++;
             i++;
@@ -590,6 +591,7 @@ double ICP::registration(intensityCloud::Ptr P, std::vector<BlockInfo>* Y, std::
                             totalLinearTranslation[0] = (accountedSamples * totalLinearTranslation[0] + linearTranslation[0] * samples) / (accountedSamples + samples);
                             totalLinearTranslation[1] = (accountedSamples * totalLinearTranslation[1] + linearTranslation[1] * samples) / (accountedSamples + samples);
                             totalLinearTranslation[2] = (accountedSamples * totalLinearTranslation[2] + linearTranslation[2] * samples) / (accountedSamples + samples);
+                            ROS_INFO("Total Linear X %f Y %f Z %f", totalLinearTranslation[0], totalLinearTranslation[1], totalLinearTranslation[2]);
                             linearSegments++;
                             linearTranslation[0] = 0;
                             linearTranslation[1] = 0;
@@ -608,10 +610,10 @@ double ICP::registration(intensityCloud::Ptr P, std::vector<BlockInfo>* Y, std::
             tY = (fabs(Y->at(i).blockPtr->mean_.y - P->at(i).y) < errorThreshold_) ? 0 : Y->at(i).blockPtr->mean_.y - P->at(i).y;
             tZ = (fabs(Y->at(i).blockPtr->mean_.z - P->at(i).z) < errorThreshold_) ? 0 : Y->at(i).blockPtr->mean_.z - P->at(i).z;
             dynamicSamples++;
-            ROS_INFO("");
-            ROS_INFO("DPoint %d X %f Y %f Z %f",i , P->at(i).x, P->at(i).y,P->at(i).z);
-            ROS_INFO("DCandt %d X %f Y %f Z %f",i, Y->at(i).blockPtr->mean_.x, Y->at(i).blockPtr->mean_.y, Y->at(i).blockPtr->mean_.z);
-            ROS_INFO("DError %d X %f Y %f Z %f Time %f",i , tX, tY, tZ,fabs(fabs(timeStamps.at(i))-fabs(timeStamps.at(slopeBegin))));
+            //ROS_INFO("");
+            //ROS_INFO("DPoint %d X %f Y %f Z %f",i , P->at(i).x, P->at(i).y,P->at(i).z);
+            //ROS_INFO("DCandt %d X %f Y %f Z %f",i, Y->at(i).blockPtr->mean_.x, Y->at(i).blockPtr->mean_.y, Y->at(i).blockPtr->mean_.z);
+            //ROS_INFO("DError %d X %f Y %f Z %f Time %f",i , tX, tY, tZ,fabs(fabs(timeStamps.at(i))-fabs(timeStamps.at(slopeBegin))));
 
             errorsX.push_back(tX);
             errorsY.push_back(tY);
@@ -629,11 +631,13 @@ double ICP::registration(intensityCloud::Ptr P, std::vector<BlockInfo>* Y, std::
                         transforms->at(j)[1] =  linearTranslation[1];
                         transforms->at(j)[2] =  linearTranslation[2];
                     }
-                    ROS_INFO("Linear X %f Y %f Z %f", linearTranslation[0], linearTranslation[1], linearTranslation[2]);
+                    ROS_INFO("Last Linear X %f Y %f Z %f", linearTranslation[0], linearTranslation[1], linearTranslation[2]);
 
                     totalLinearTranslation[0] = (accountedSamples * totalLinearTranslation[0] + linearTranslation[0] * samples) / (accountedSamples + samples);
                     totalLinearTranslation[1] = (accountedSamples * totalLinearTranslation[1] + linearTranslation[1] * samples) / (accountedSamples + samples);
                     totalLinearTranslation[2] = (accountedSamples * totalLinearTranslation[2] + linearTranslation[2] * samples) / (accountedSamples + samples);
+                    ROS_INFO("Last Total Linear X %f Y %f Z %f", totalLinearTranslation[0], totalLinearTranslation[1], totalLinearTranslation[2]);
+
                     samples = 0;
                     tX = 0;
                     tY = 0;
@@ -644,12 +648,13 @@ double ICP::registration(intensityCloud::Ptr P, std::vector<BlockInfo>* Y, std::
                     slopeX = slope(positiveStamps,errorsX);
                     slopeY = slope(positiveStamps,errorsY);
                     slopeZ = slope(positiveStamps,errorsZ);
-                    ROS_INFO("SlopeX %f SlopeY %f Slopez %f", slopeX, slopeY, slopeZ);
+                    ROS_INFO("Last SlopeX %f SlopeY %f Slopez %f", slopeX, slopeY, slopeZ);
                     for (int j = slopeBegin;j<i;j++){
                         transforms->at(j)[0] = fabs(positiveStamps.at(j-slopeBegin)) * slopeX;
                         transforms->at(j)[1] = fabs(positiveStamps.at(j-slopeBegin)) * slopeY;
                         transforms->at(j)[2] = fabs(positiveStamps.at(j-slopeBegin)) * slopeZ;
                     }
+                    ROS_INFO("Last total SlopeX %f SlopeY %f Slopez %f", slopeX * positiveStamps.back(), slopeY* positiveStamps.back(), slopeZ* positiveStamps.back());
                     (*T)[0] += slopeX * positiveStamps.back();
                     (*T)[1] += slopeY * positiveStamps.back();
                     (*T)[2] += slopeZ * positiveStamps.back();
@@ -657,10 +662,10 @@ double ICP::registration(intensityCloud::Ptr P, std::vector<BlockInfo>* Y, std::
                     errorsX.clear();
                     errorsY.clear();
                     errorsZ.clear();
-    }*/
-    //(*T)[0] += totalLinearTranslation[0];
-    //(*T)[1] += totalLinearTranslation[1];
-    //(*T)[2] += totalLinearTranslation[2];
+    }
+    (*T)[0] += totalLinearTranslation[0];
+    (*T)[1] += totalLinearTranslation[1];
+    (*T)[2] += totalLinearTranslation[2];
 
 
 
@@ -669,6 +674,7 @@ double ICP::registration(intensityCloud::Ptr P, std::vector<BlockInfo>* Y, std::
     /*slopeX = slope(positiveStamps,errorsX);
     slopeY = slope(positiveStamps,errorsY);
     slopeZ = slope(positiveStamps,errorsZ);
+    ROS_INFO("SlopeX %f SlopeY %f Slopez %f", slopeX, slopeY, slopeZ);
 
     transforms->at(0)[0] = (fabs(Y->at(0).blockPtr->mean_.x - P->at(0).x) < errorThreshold_) ? 0 : Y->at(0).blockPtr->mean_.x - P->at(0).x;
     transforms->at(0)[1] = (fabs(Y->at(0).blockPtr->mean_.y - P->at(0).y) < errorThreshold_) ? 0 : Y->at(0).blockPtr->mean_.y - P->at(0).y;
@@ -701,9 +707,9 @@ double ICP::registration(intensityCloud::Ptr P, std::vector<BlockInfo>* Y, std::
     //(*T)[1] = slopeY * positiveStamps.back();
     //(*T)[2] = slopeZ * positiveStamps.back();
 
-    (*T)[0] = centroidY.x - centroidP.x;
-    (*T)[1] = centroidY.y - centroidP.y;
-    (*T)[2] = centroidY.z - centroidP.z;
+    //(*T)[0] = centroidY.x - centroidP.x;
+    //(*T)[1] = centroidY.y - centroidP.y;
+    //(*T)[2] = centroidY.z - centroidP.z;
 
     //(*T)[0] /= ySize;
     //(*T)[1] /= ySize;
@@ -803,8 +809,8 @@ intensityCloud::Ptr ICP::getTransformation(avora_msgs::StampedIntensityCloudPtr 
 
 
         accumulatedR = accumulatedR * (*R);
-        //ROS_INFO("\n%d \tTrl x = %f y = %f z = %f error = %f \n\tAcc  x = %f y = %f z = %f",iterations,(*T)[0], (*T)[1], (*T)[2], error,
-        //accumulatedT[0], accumulatedT[1], accumulatedT[2]);
+        ROS_INFO("\n%d \tTrl x = %f y = %f z = %f error = %f \n\tAcc  x = %f y = %f z = %f",iterations,(*T)[0], (*T)[1], (*T)[2], error,
+                                                                                            accumulatedT[0], accumulatedT[1], accumulatedT[2]);
 
         //ROS_INFO("\n%d \tRotation \n%f %f %f\n%f %f %f\n%f %f %f",iterations,accumulatedR(0,0),accumulatedR(0,1),accumulatedR(0,2),
         //                                                        accumulatedR(1,0),accumulatedR(1,1),accumulatedR(1,2),

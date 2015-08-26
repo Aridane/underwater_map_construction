@@ -5,7 +5,7 @@ sizeXMeters: 120
 sizeYMeters: 120
 fastUpdate: false
 maxIterations: 10
-errorThreshold: 0.1
+errorThreshold: 0.3
 speedError: 0
 nSamples: 2
 sampleStep: 0.1

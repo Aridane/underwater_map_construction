@@ -1,2 +1,4 @@
 mode: 'STATISTICAL'
 keepOrganized: false
+stddevMulThresh: 0
+meanK: 100

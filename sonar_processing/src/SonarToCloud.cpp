@@ -255,6 +255,9 @@ void SonarToCloud::beamCallback(avora_msgs::SonarScanLineConstPtr scanLine){
             pclPoint.y = geometryPoint.point.y;// + yChange;// + (poseChange_.position.y * (scanLine->header.stamp.toSec() - oldStamp_));
             pclPoint.z = geometryPoint.point.z;// + zChange;// + (poseChange_.position.z * (scanLine->header.stamp.toSec() - oldStamp_));
             pclPoint.intensity = scanLine->intensities[i];
+            if (i == 0){
+                pclPoint.intensity = 0;
+            }
             //if (moving_) pclPoint.data_c[3] = scanLine->header.stamp.toSec();
             //else pclPoint.data_c[3] = -scanLine->header.stamp.toSec();
             if(pclPoint.z > heightLimit_) continue;
