@@ -37,6 +37,7 @@ namespace sonar_processing
         intensityCloud::Ptr sonarCloud_;
         ros::Subscriber cloudSubscriber_;
         ros::Publisher wallPublisher_;
+        ros::Publisher wallCoefficientPublisher_;
         ros::Publisher debugPublisher_;
         image_transport::ImageTransport* it_;
         image_transport::Publisher debugImagePublisher_;

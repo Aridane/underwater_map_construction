@@ -20,11 +20,8 @@
 		<rosparam command="load" file="$(find sonar_processing)/yaml/OutlierRemover_default.yaml"/>
 	</node>
 
-	<!--<rosparam param="Wall2DDetectorNodelet" file="$(find sonar_processing)/yaml/Wall2DDetector_default.yaml"/>
-	<node pkg="nodelet" type="nodelet" name="Wall2DDetectorNodelet" launch-prefix="valgrind" 
-		args="load sonar_processing/Wall2DDetector standalone_nodelet" output="screen">	
+	<rosparam param="Wall2DDetectorNodelet" file="$(find sonar_processing)/yaml/Wall2DDetector_default.yaml"/>
+	<node pkg="nodelet" type="nodelet" name="Wall2DDetectorNodelet" args="load sonar_processing/Wall2DDetector standalone_nodelet" output="screen">	
 		<rosparam command="load" file="$(find sonar_processing)/yaml/Wall2DDetector_default.yaml"/>
-	</node>-->
-	
-	 
+	</node> 
 </launch>

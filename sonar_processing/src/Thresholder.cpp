@@ -111,12 +111,20 @@ pcl::IndicesConstPtr Thresholder::thresholdCloud(intensityCloud::Ptr cloudPtr)
 
 double Thresholder::getOTSUThreshold(intensityCloud::Ptr cloudPtr){
     double threshold = 0;
-    //Histogram
-    std::vector<double> histogram(maxBinValue_ + 1,0);
-
     //OTSU Method
     double sum = 0;
-    for (int i=0 ; i<maxBinValue_+1; i++) sum += i * histogram[i];
+    double max = 0.0;
+
+    //Histogram
+    std::vector<double> histogram(maxBinValue_ + 1,0);
+    intensityCloud::iterator cloudIterator;
+    for (cloudIterator = cloudPtr->begin();cloudIterator != cloudPtr->end();cloudIterator++){
+        histogram[cloudIterator->intensity]++;
+        if (cloudIterator->intensity > max) max = cloudIterator->intensity;
+    }
+    for (int i=0 ; i<maxBinValue_+1; i++){
+        sum += i * histogram[i];
+    }
 
     double size = cloudPtr->size();
     double sumB = 0;
@@ -124,7 +132,6 @@ double Thresholder::getOTSUThreshold(intensityCloud::Ptr cloudPtr){
     double wF = 0;
     double mB;
     double mF;
-    double max = 0.0;
     double between = 0.0;
     double threshold1 = 0.0;
     double threshold2 = 0.0;
@@ -145,6 +152,7 @@ double Thresholder::getOTSUThreshold(intensityCloud::Ptr cloudPtr){
             max = between;
         }
     }
+    ROS_INFO("OTSU th1 = %f, th2 %f",threshold1,threshold2);
     threshold = (threshold1 + threshold2) / 2.0;
     return threshold;
 }

@@ -212,18 +212,18 @@ void addObservationToBlock(boost::shared_ptr<Block> blockPtr, intensityCloud::it
 
 
     //Update variance
-    blockPtr->variance_.x = (blockPtr->nPoints_ - 2.0)
-            * blockPtr->variance_.x / (blockPtr->nPoints_-1.0)
-            + (cloudIterator->x - blockPtr->mean_.x) / (blockPtr->nPoints_ - 1.0);
-    blockPtr->variance_.y = (blockPtr->nPoints_ - 2.0)
-            * blockPtr->variance_.y / (blockPtr->nPoints_-1.0)
-            + (cloudIterator->y - blockPtr->mean_.y) / (blockPtr->nPoints_ - 1.0);
-    blockPtr->variance_.z = (blockPtr->nPoints_ - 2.0)
+    blockPtr->variance_.x = (blockPtr->nPoints_ - 1.0)
+            * blockPtr->variance_.x / (blockPtr->nPoints_)
+            + (cloudIterator->x - blockPtr->mean_.x)*(cloudIterator->x - blockPtr->mean_.x) / (blockPtr->nPoints_);
+    blockPtr->variance_.y = (blockPtr->nPoints_ - 1.0)
+            * blockPtr->variance_.y / (blockPtr->nPoints_)
+            + (cloudIterator->y - blockPtr->mean_.y)*(cloudIterator->y - blockPtr->mean_.y) / (blockPtr->nPoints_);
+    blockPtr->variance_.z = (blockPtr->nPoints_ - 1.0)
             * blockPtr->variance_.z / (blockPtr->nPoints_-1.0)
-            + (cloudIterator->z - blockPtr->mean_.z) / (blockPtr->nPoints_ - 1.0);
-    blockPtr->variance_.intensity = (blockPtr->nPoints_ - 2.0)
+            + (cloudIterator->z - blockPtr->mean_.z)*(cloudIterator->z - blockPtr->mean_.z) / (blockPtr->nPoints_ - 1.0);
+    blockPtr->variance_.intensity = (blockPtr->nPoints_ - 1.0)
             * blockPtr->variance_.intensity / (blockPtr->nPoints_-1.0)
-            + (cloudIterator->intensity - blockPtr->mean_.intensity) / (blockPtr->nPoints_ - 1.0);
+            + (cloudIterator->intensity - blockPtr->mean_.intensity)*(cloudIterator->intensity - blockPtr->mean_.intensity) / (blockPtr->nPoints_ - 1.0);
 }
 
 void fuseBlocks(boost::shared_ptr<Block> target, boost::shared_ptr<Block> newBlock){

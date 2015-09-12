@@ -4,7 +4,7 @@ MLSMCore::MLSMCore(ros::NodeHandle* n):
     ICPSolver_(1,0.15)
     {
 	ros::NodeHandle nh("~");
-    nh.param("cloudSubscribeTopic", cloudSubscribeTopic_, string("/sonar/scan/thresholded"));
+    nh.param("cloudSubscribeTopic", cloudSubscribeTopic_, string("/sonar/scan/cleaned"));
     nh.param("orientationSubscribeTopic_", orientationSubscribeTopic_, string("/orientation"));
     nh.param("positionSubscribeTopic", positionSubscribeTopic_, string("/lastPosition"));
     nh.param("markerPublishTopic", markerPublishTopic_, string("/MLSM/Markers"));
@@ -38,7 +38,7 @@ MLSMCore::MLSMCore(ros::NodeHandle* n):
     matchingSubscriber_ = n->subscribe("startMatching", 0, &MLSMCore::matchingCallback, this);
     velSubscriber_ = n->subscribe(velTopic_.c_str(), 1, &MLSMCore::velCallback, this);
     debugPublisher_ = n->advertise<sensor_msgs::PointCloud2>("debug_cloud",0);
-    mapPublisher_ = n->advertise<sensor_msgs::PointCloud2>("/map/cloud",0);
+    mapPublisher_ = n->advertise<sensor_msgs::PointCloud2>("/MLSM/cloud",0);
 
 
     ICPSolver_.setDebugPublisher(&debugPublisher_);

@@ -1,5 +1,7 @@
-mode: RANSAC
-cloudSubscribeTopic: /sonar/scan/thresholded
+mode: 'RANSAC'
+cloudSubscribeTopic: '/sonar/scan/cleaned'
+wallPublishTopic: '/sonar/walls/cloud'
+wallCoefficientsPublishTopic: '/sonar/walls/coeff'
 RANSACDistance: 0.1
 RANSACProbability: 0.5
 RANSACMaxIterations: 1000000

@@ -42,6 +42,8 @@ void Wall2DDetector::onInit(){
             &Wall2DDetector::cloudCallback, this);
     wallPublisher_ = nh_.advertise<sensor_msgs::PointCloud2>(
             wallPublishTopic_.c_str(), 1);
+    wallCoefficientPublisher_ = nh_.advertise<avora_msgs::Wall>(
+                wallCoefficientsPublishTopic_.c_str(), 1);
     debugPublisher_ = nh_.advertise<sensor_msgs::PointCloud2>(
             "/Debug/Wall", 1);
     debugImagePublisher_ =  it_->advertise("/Sonar/Walls/image/debug", 1);
@@ -58,7 +60,7 @@ Wall2DDetector::~Wall2DDetector() {
 }
 
 void Wall2DDetector::cloudCallback(avora_msgs::StampedIntensityCloudConstPtr cloudMessagePtr) {
-    ROS_INFO("Wall 2D Got the cloud");
+    NODELET_INFO("Wall 2D Got the cloud");
     intensityCloud cl;
     pcl::fromROSMsg(cloudMessagePtr->cloud,cl);
     intensityCloud::Ptr cloud = boost::make_shared<intensityCloud>(cl);
@@ -71,7 +73,7 @@ void Wall2DDetector::cloudCallback(avora_msgs::StampedIntensityCloudConstPtr clo
 		Eigen::VectorXf coefficients;
 		sensor_msgs::PointCloud2 cloudMsg2;
         for (int i=0;i<nWalls_;i++){
-            ROS_INFO("========== Wall %d ==========",i);
+            NODELET_INFO("========== Wall %d ==========",i);
 
 			// created RandomSampleConsensus object and compute the appropriated model
 			pcl::SampleConsensusModelLine<pcl::PointXYZI>::Ptr model_l(
@@ -80,10 +82,10 @@ void Wall2DDetector::cloudCallback(avora_msgs::StampedIntensityCloudConstPtr clo
             ransac.setDistanceThreshold(RANSACDistance_);
             ransac.setMaxIterations(RANSACMaxIterations_);
             ransac.setProbability(RANSACProbability_);
-            ROS_INFO("Compute ransac");
+            NODELET_INFO("Compute ransac");
 
 			ransac.computeModel();
-            ROS_INFO("Ransac computed");
+            NODELET_INFO("Ransac computed");
 
             ransac.getInliers(inliers);
             ransac.getModelCoefficients(coefficients);
@@ -91,14 +93,14 @@ void Wall2DDetector::cloudCallback(avora_msgs::StampedIntensityCloudConstPtr clo
 
 			// copies all inliers of the model computed to another PointCloud
             pcl::copyPointCloud(*cloud,inliers,line);
-            ROS_INFO("CLoud size before filtering out %d", (int)cloud->size());
-            ROS_INFO("Inliers %d C - I %d", (int)inliers.size(),(int)cloud->size()-inliers.size());
+            NODELET_INFO("CLoud size before filtering out %d", (int)cloud->size());
+            NODELET_INFO("Inliers %d C - I %d", (int)inliers.size(),(int)cloud->size()-inliers.size());
             pcl::ExtractIndices<pcl::PointXYZI> extractor(true);
             extractor.setInputCloud (cloud);
             extractor.setIndices (boost::make_shared<vector<int> >(inliers));
             extractor.setNegative (true);
             extractor.filter(*cloud);
-            ROS_INFO("CLoud size after filtering out %d", (int)cloud->size());
+            NODELET_INFO("CLoud size after filtering out %d", (int)cloud->size());
 
 			inliers.clear();
 			ros::spinOnce();
@@ -125,12 +127,12 @@ void Wall2DDetector::cloudCallback(avora_msgs::StampedIntensityCloudConstPtr clo
             p = a - (a[0]*n[0] + a[1]*n[1])*n;
             double rho = sqrt(p[0]*p[0] + p[1]*p[1]);
             double theta = asin(p[1]/rho);
-            ROS_INFO("Coefficients %f %f %f %f %f %f",coefficients[0],coefficients[1],coefficients[2],coefficients[3],coefficients[4],coefficients[5]);
-            ROS_INFO("\n\trho %f\n\ttheta %f (%f)\n\tPx %f Py %f",rho,theta,theta*180.0/M_PI,p[0],p[1]);
+            NODELET_INFO("Coefficients %f %f %f %f %f %f",coefficients[0],coefficients[1],coefficients[2],coefficients[3],coefficients[4],coefficients[5]);
+            NODELET_INFO("\n\trho %f\n\ttheta %f (%f)\n\tPx %f Py %f",rho,theta,theta*180.0/M_PI,p[0],p[1]);
             wallMsg_.orientation = theta;
             wallMsg_.distance = rho;
             wallMsg_.header = cloudMessagePtr->header;
-
+            wallCoefficientPublisher_.publish(wallMsg_);
             visualization_msgs::Marker marker;
             marker.header = cloudMessagePtr->header;
             marker.ns = "walls";
