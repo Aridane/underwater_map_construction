@@ -74,14 +74,6 @@ Block* MLSM::findClosestBlock(pcl::PointXYZI point){
     closestCellRes = kd_nearest(kdtree_, pos);
     //ROS_INFO("Find suitable block %d",closestCellRes->size);
     kd_res_item(closestCellRes, pos);
-
-    //int i = (int)(round(pos[0]));
-    //int j = (int)(round(pos[1]));
-    //cellPos = (int*)kd_res_item_data(closestCellRes);
-    //ROS_INFO("iCell %d %d",i,j);
-    //ROS_INFO("Closest Cell %f %f",round(pos[0]),round(pos[1]));
-    //if (cellP != NULL) ROS_INFO("NOT NULL CELL");
-    //else ROS_INFO("NULL CELL");
     // Find suitable block in cell
     blockPtr = findSuitableBlock(round(pos[0]),round(pos[1]),point);
     //ROS_INFO("Suitable block found?");
@@ -102,35 +94,19 @@ Block* MLSM::findSuitableBlock(cellPtr cellP, pcl::PointXYZI point){
         cell candidateList;
         // We follow exactly the same procedure as we did for inserting the block
         for (iterator = cellP->begin(); iterator != cellP->end();) {
-
             if (fabs(point.z - iterator->get()->mean_.x) < closestZ){
                 closestZ = fabs(point.z - iterator->get()->mean_.x);
                 blockPtr = (cellP->at(iterator - cellP->begin() + 0)).get();
 
             }
-
                 if ((fabs(point.z - iterator->get()->height_) < resolution_) ||
                     (fabs(iterator->get()->height_ - iterator->get()->depth_ - point.z) < resolution_)){
                 if (!candidateFound){
                     blockPtr = (cellP->at(iterator - cellP->begin() + 0)).get();
-
-                    //addObservationToBlock(blockPtr,cloudIterator);
-                    //candidateFound = true;
                     return blockPtr;
                 }
-                /*else {
-                    ROS_DEBUG("FUSING BLOCKS!");
-                    fuseBlocks(blockPtr,cellP->at(iterator - cellP->begin() + 0));
-                    ROS_DEBUG("Deleting BLOCK");
-                    iterator = cellP->erase(iterator);
-                    ROS_DEBUG("Blocks fused");
-                    end = cellP->end();
-                    continue;
-                }*/
-                //candidateList.push_back(cellP->at(iterator - cellP->begin() + 0));
             }
             iterator++;
-
         }
     }
     return blockPtr;
@@ -145,39 +121,20 @@ Block* MLSM::findSuitableBlock(int i, int j, pcl::PointXYZI point){
             && (cellP->size() != 0)) {
         //Find block in height Z in cellP
         cell::iterator iterator, end, olditerator;
-        bool updated = false;
-        cell candidateList;
         // We follow exactly the same procedure as we did for inserting the block
         for (iterator = cellP->begin(); iterator != cellP->end();) {
-
             if (fabs(point.z - iterator->get()->mean_.x) < closestZ){
                 closestZ = fabs(point.z - iterator->get()->mean_.x);
                 blockPtr = (cellP->at(iterator - cellP->begin() + 0)).get();
-
             }
-
-                if ((fabs(point.z - iterator->get()->height_) < resolution_) ||
+            if ((fabs(point.z - iterator->get()->height_) < resolution_) ||
                     (fabs(iterator->get()->height_ - iterator->get()->depth_ - point.z) < resolution_)){
                 if (!candidateFound){
                     blockPtr = (cellP->at(iterator - cellP->begin() + 0)).get();
-
-                    //addObservationToBlock(blockPtr,cloudIterator);
-                    //candidateFound = true;
-                    return blockPtr;
+                   return blockPtr;
                 }
-                /*else {
-                    ROS_DEBUG("FUSING BLOCKS!");
-                    fuseBlocks(blockPtr,cellP->at(iterator - cellP->begin() + 0));
-                    ROS_DEBUG("Deleting BLOCK");
-                    iterator = cellP->erase(iterator);
-                    ROS_DEBUG("Blocks fused");
-                    end = cellP->end();
-                    continue;
-                }*/
-                //candidateList.push_back(cellP->at(iterator - cellP->begin() + 0));
             }
             iterator++;
-
         }
     }
     return blockPtr;
@@ -269,13 +226,6 @@ void fuseBlocks(boost::shared_ptr<Block> target, boost::shared_ptr<Block> newBlo
     target->mean_.intensity = combinedMean.intensity;
 
     //Update depth and height
-    /*double lowestZ = 0;
-    if ((newBlock->height_ - newBlock->depth_) < (target->height_ - target->depth_)) lowestZ = newBlock->height_ - newBlock->depth_;
-    else lowestZ = target->height_ - target->depth_;
-    if (newBlock->height_ > target->height_) target->height_ = newBlock->height_;
-    target->depth_ = fabs(target->height_ - lowestZ);*/
-
-    /*Might be worth testing*/
     double heightDifference = fabs(newBlock->height_ - target->height_);
     if (newBlock->height_ > target->height_){
         target->depth_ += heightDifference;
@@ -308,15 +258,12 @@ int MLSM::addPointCloud(intensityCloud::Ptr cloud) {
         index.y = floor(cloudIterator->y / resolution_);
         index.z = floor(cloudIterator->z / resolution_);
 
-        //Model empty spaces?
         if (isnan(cloudIterator->x) || isnan(cloudIterator->y) || isnan(cloudIterator->z)) continue;
         if (cloudIterator->z > 4.7) continue;
         ROS_DEBUG("Adding point x = %.2f y = %.2f z = %.2f", cloudIterator->x, cloudIterator->y ,cloudIterator->z);
         ROS_DEBUG("Index x = %d y = %d z=%d",(int)index.x,(int)index.y,(int)index.z);
         //Insert/Update
         //Read position, if exists, update. If doesn't, create.
-
-
         if (((cellP = (*grid_)((int) index.x, (int) index.y)) != NULL)
                 && (cellP->size() != 0)) {
             //Find block in height Z in cellP
@@ -347,10 +294,8 @@ int MLSM::addPointCloud(intensityCloud::Ptr cloud) {
                         end = cellP->end();
                         continue;
                     }
-                    //candidateList.push_back(cellP->at(iterator - cellP->begin() + 0));
                 }
                 iterator++;
-
             }
             /****************************************************************************/
             /*If there are more than 1 candidates, we fuse them, if there's only one, we*/
@@ -377,64 +322,6 @@ int MLSM::addPointCloud(intensityCloud::Ptr cloud) {
                 cellP->push_back(blockPtr);
                 occupiedBlocks_.push_back(blockPtr);
             }
-            /*else if (candidateList.size() == 1){
-                //If there is only one block collecting the measurement we update it
-                iterator = candidateList.begin();
-                addObservationToBlock(iterator, cloudIterator);
-            } else if (candidateList.size() > 1){
-                //if there are several candidates we fuse them and then add the new observation
-                iterator = candidateList.begin();
-                blockPtr = boost::make_shared<Block>(iterator->get()->mean_, iterator->get()->variance_,
-                                                     iterator->get()->nPoints_,
-                                                     iterator->get()->height_, iterator->get()->depth_,
-                                                     FLOOR);
-                iterator++;
-                pcl::PointXYZI combinedMean;
-                for (end = candidateList.end(); iterator != end;++iterator) {
-                    combinedMean.x = (blockPtr->mean_.x + iterator->get()->mean_.x) * 0.5;
-                    combinedMean.y = (blockPtr->mean_.y + iterator->get()->mean_.y) * 0.5;
-                    combinedMean.z = (blockPtr->mean_.z + iterator->get()->mean_.z) * 0.5;
-                    combinedMean.intensity = (blockPtr->mean_.intensity + iterator->get()->mean_.intensity) * 0.5;
-
-                    blockPtr->variance_.x = (blockPtr->nPoints_*(blockPtr->variance_.x
-                                                                 +((blockPtr->mean_.x - combinedMean.x)
-                                                                   *(blockPtr->mean_.x - combinedMean.x))))
-                            +(iterator->get()->nPoints_*(iterator->get()->variance_.x
-                                                         +((iterator->get()->mean_.x - combinedMean.x)
-                                                           *(iterator->get()->mean_.x - combinedMean.x))));
-
-                    blockPtr->variance_.y = (blockPtr->nPoints_*(blockPtr->variance_.y
-                                                                 +((blockPtr->mean_.y - combinedMean.y)
-                                                                   *(blockPtr->mean_.y - combinedMean.y))))
-                            +(iterator->get()->nPoints_*(iterator->get()->variance_.y
-                                                         +((iterator->get()->mean_.y - combinedMean.y)
-                                                           *(iterator->get()->mean_.y - combinedMean.y))));
-
-                    blockPtr->variance_.z = (blockPtr->nPoints_ *
-                                             (blockPtr->variance_.z + ((blockPtr->mean_.z -
-                                                                        combinedMean.z) * (blockPtr->mean_.z - combinedMean.z)))) +
-                            (iterator->get()->nPoints_
-                             * (iterator->get()->variance_.z
-                                + ((iterator->get()->mean_.z - combinedMean.z)
-                                   * (iterator->get()->mean_.z - combinedMean.z))));
-
-                    blockPtr->variance_.intensity = (blockPtr->nPoints_ *
-                                                     (blockPtr->variance_.intensity + ((blockPtr->mean_.z -
-                                                                                        combinedMean.z) * (blockPtr->mean_.z - combinedMean.z))))
-                            + (iterator->get()->nPoints_
-                               * (iterator->get()->variance_.intensity
-                                  + ((iterator->get()->mean_.z - combinedMean.z)
-                                     * (iterator->get()->mean_.z - combinedMean.z))));
-
-                    blockPtr->mean_.x = combinedMean.x;
-                    blockPtr->mean_.y = combinedMean.y;
-                    blockPtr->mean_.z = combinedMean.z;
-                    blockPtr->mean_.intensity = combinedMean.intensity;
-
-                }
-                // After fused we add the current point
-                addObservationToBlock(iterator, cloudIterator);
-            }*/
         } else if (cellP == NULL) {
             ROS_ERROR("[MLSM] GOT NULL cellP");
         } else if (cellP->size() == 0) {

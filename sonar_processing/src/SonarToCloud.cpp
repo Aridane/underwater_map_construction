@@ -79,45 +79,6 @@ void SonarToCloud::velCallback(geometry_msgs::Twist::Ptr twistMessage){
     else ROS_INFO("STOPPED");
 }
 
-/*void SonarToCloud::velCallback(nav_msgs::Odometry msg){
-
-    if (lastTime_ == 0){
-        oldPose_.position = msg.pose.pose.position;
-        lastTime_ = ros::Time::now().toNSec();
-    }
-    else {
-        if ((fabs(msg.pose.pose.position.x - oldPose_.position.x) > 0.0001) || (fabs(msg.pose.pose.position.y - oldPose_.position.y) > 0.0001)){
-            //time_ = (ros::Time::now().toNSec() - lastTime_);
-            pose_.position.x = msg.pose.pose.position.x;
-            pose_.position.y = msg.pose.pose.position.y;
-            pose_.position.z = msg.pose.pose.position.z;
-        }
-//        oldPose_.position = msg.pose.pose.position;
-
-        //lastTime_ = ros::Time::now().toNSec();
-    }
-
-    if (lastTime_ == 0){
-        oldPose_.position = msg.pose.pose.position;
-        lastTime_ = ros::Time::now().toSec();
-    }
-    else {
-        poseChange_.position.x += (msg.pose.pose.position.x - oldPose_.position.x);
-        poseChange_.position.y += (msg.pose.pose.position.y - oldPose_.position.y);
-        poseChange_.position.z += (msg.pose.pose.position.z - oldPose_.position.z);
-        if ((fabs(msg.pose.pose.position.x - oldPose_.position.x) > 0.01) || (fabs(msg.pose.pose.position.y - oldPose_.position.y) > 0.01)){
-            time_ = time_ + (ros::Time::now().toSec() - lastTime_);
-            moving_ = true;
-        }
-        else {
-            moving_ = false;
-        }
-        oldPose_.position = msg.pose.pose.position;
-
-        lastTime_ = ros::Time::now().toSec();
-    }
-}*/
-
 bool SonarToCloud::newAngle(avora_msgs::SonarScanLineConstPtr scan, avora_msgs::SonarScanLineConstPtr oldScanLine){
     return (fabs(scan->sensorAngle - oldScanLine->sensorAngle) > 0.001);
 }

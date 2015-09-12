@@ -113,7 +113,8 @@ std::vector<BlockInfo> ICP::closestPoints(intensityCloud::Ptr P, MLSM *X,std::ve
     }
     ////ROS_INFO("Finished finding closest points");
     return result;
-    /*}
+    /*Directional grid based search based on bresenham. No longer needed.
+     * }
     //ROS_INFO("With estimation");
 
     if (eV[0] > eV[1]){
@@ -340,13 +341,10 @@ double slope(const vector<double>& x, const vector<double>& y){
 
 double ICP::registration(intensityCloud::Ptr P, std::vector<BlockInfo>* Y, std::vector<double> timeStamps, std::vector<Vector3d>* transforms, Vector3d *T, Matrix4f *R, Vector3d direction){
     double error = 0;
-    pcl::PointXYZI centroidP = 0, centroidY = 0, centroid2 = 0;
+    pcl::PointXYZI centroidP = 0, centroidY = 0;
     pcl::registration::TransformationEstimationSVD<pcl::PointXYZI, pcl::PointXYZI> svd;
-    pcl::registration::TransformationEstimationLM<pcl::PointXYZI, pcl::PointXYZI> lm;
     pcl::registration::CorrespondenceEstimation<pcl::PointXYZI, pcl::PointXYZI> correspondenceEstimator;
     int i = 0;
-
-
     intensityCloud::iterator cloudIterator = P->begin();
     unsigned int validPoints = 0;
     intensityCloud candidatePointCloud, pointCloud;
@@ -389,19 +387,21 @@ double ICP::registration(intensityCloud::Ptr P, std::vector<BlockInfo>* Y, std::
         p.z = cloudIterator->z - centroidP.z;
         pointCloud.push_back(p);
     }
-    // Calculate SVD
-    //pcl::ConstCloudIterator<pcl::PointXYZI> p1(pointCloud);
-    //pcl::ConstCloudIterator<pcl::PointXYZI> p2(candidatePointCloud);
-    pcl::registration::TransformationEstimationSVD<pcl::PointXYZI, pcl::PointXYZI>::Matrix4 rotation;
-    rotation = Matrix4f::Identity();
-    pcl::PointCloud<pcl::PointXYZI>::Ptr source (new pcl::PointCloud<pcl::PointXYZI>(pointCloud));
-    pcl::PointCloud<pcl::PointXYZI>::Ptr target (new pcl::PointCloud<pcl::PointXYZI>(candidatePointCloud));
-    boost::shared_ptr<pcl::Correspondences> correspondences (new pcl::Correspondences);
-    correspondenceEstimator.setInputSource(source);
-    correspondenceEstimator.setInputTarget(target);
-    correspondenceEstimator.determineCorrespondences(*correspondences);
+
 
     if ((direction[0] == 0)&&(direction[1] == 0)&&(direction[2] == 0)){
+        // Calculate SVD
+        //pcl::ConstCloudIterator<pcl::PointXYZI> p1(pointCloud);
+        //pcl::ConstCloudIterator<pcl::PointXYZI> p2(candidatePointCloud);
+        pcl::registration::TransformationEstimationSVD<pcl::PointXYZI, pcl::PointXYZI>::Matrix4 rotation;
+        rotation = Matrix4f::Identity();
+        pcl::PointCloud<pcl::PointXYZI>::Ptr source (new pcl::PointCloud<pcl::PointXYZI>(pointCloud));
+        pcl::PointCloud<pcl::PointXYZI>::Ptr target (new pcl::PointCloud<pcl::PointXYZI>(candidatePointCloud));
+        boost::shared_ptr<pcl::Correspondences> correspondences (new pcl::Correspondences);
+        correspondenceEstimator.setInputSource(source);
+        correspondenceEstimator.setInputTarget(target);
+        correspondenceEstimator.determineCorrespondences(*correspondences);
+
         svd.estimateRigidTransformation(pointCloud,candidatePointCloud, *correspondences,rotation);
         ROS_INFO("\n \tSVD Rotation \n%f %f %f\n%f %f %f\n%f %f %f",rotation(0,0),rotation(0,1),rotation(0,2),
         rotation(1,0),rotation(1,1),rotation(1,2),
@@ -440,62 +440,6 @@ double ICP::registration(intensityCloud::Ptr P, std::vector<BlockInfo>* Y, std::
 
 
     }
-    /*
-
-    for (cloudIterator = pointCloud.begin();cloudIterator != pointCloud.end();cloudIterator++){
-        if (isnan(cloudIterator->x) || isnan(cloudIterator->y) || isnan(cloudIterator->z)) continue;
-        cloudIterator->x += centroidP.x;
-        cloudIterator->y += centroidP.y;
-        cloudIterator->z += centroidP.z;
-        centroid2.x += cloudIterator->x;
-        centroid2.y += cloudIterator->y;
-        centroid2.z += cloudIterator->z;
-    }
-    centroid2.x /= validPoints;
-    centroid2.y /= validPoints;
-    centroid2.z /= validPoints;
-    //ROS_INFO("\n\tCentroid2 x = %f y = %f z = %f",centroid2.x, centroid2.y, centroid2.z);
-
-    (*T)[0] = centroidY.x - centroidP.x;
-    (*T)[1] = centroidY.y - centroidP.y;
-    (*T)[2] = centroidY.z - centroidP.z;*/
-
-
-    /*Vector3d v, v0,v1;
-    Vector3d diffs;
-    v[0] = v[1] = v[2] = 0;
-    v0[0] = v0[1] = v0[2] = 0;
-    v1[0] = v1[1] = v1[2] = 0;
-    v0[0] = ((Y->at(0).blockPtr->mean_.x - P->at(0).x) < errorThreshold_) ? 0 : Y->at(0).blockPtr->mean_.x - P->at(0).x;
-    v0[1] = ((Y->at(0).blockPtr->mean_.y - P->at(0).y) < errorThreshold_) ? 0 : Y->at(0).blockPtr->mean_.y - P->at(0).y;
-    v0[2] = ((Y->at(0).blockPtr->mean_.z - P->at(0).z) < errorThreshold_) ? 0 : Y->at(0).blockPtr->mean_.z - P->at(0).z;
-
-    for(int i=1;i<ySize;i++){
-        v1[0] = ((Y->at(i).blockPtr->mean_.x - P->at(i).x) < errorThreshold_) ? 0 : Y->at(i).blockPtr->mean_.x - P->at(i).x;
-        v1[1] = ((Y->at(i).blockPtr->mean_.y - P->at(i).y) < errorThreshold_) ? 0 : Y->at(i).blockPtr->mean_.y - P->at(i).y;
-        v1[2] = ((Y->at(i).blockPtr->mean_.z - P->at(i).z) < errorThreshold_) ? 0 : Y->at(i).blockPtr->mean_.z - P->at(i).z;
-        if ((timeStamps[i] - timeStamps[i-1]) != 0 ){
-            diffs[0] = ((v1[0] - v0[0])/(timeStamps[i] - timeStamps[i-1]))/i;
-            diffs[1] = ((v1[1] - v0[1])/(timeStamps[i] - timeStamps[i-1]))/i;
-            diffs[2] = ((v1[2] - v0[2])/(timeStamps[i] - timeStamps[i-1]))/i;
-        }
-        else {
-            diffs[0] = 0;
-            diffs[1] = 0;
-            diffs[2] = 0;
-        }
-        v[0] = (i-1) * (v[0]/i) + diffs[0];
-        v[1] = (i-1) * (v[1]/i) + diffs[1];
-        v[2] = (i-1) * (v[2]/i) + diffs[2];
-        v0[0] = v1[0];
-        v0[1] = v1[1];
-        v0[2] = v1[2];
-    }
-
-
-    (*Tv)[0] = v[0];
-    (*Tv)[1] = v[1];
-    (*Tv)[2] = v[2];*/
     else {
         double angle, closestAngle = M_PI, longest;
         (*T)[0] = 0;
@@ -667,56 +611,6 @@ double ICP::registration(intensityCloud::Ptr P, std::vector<BlockInfo>* Y, std::
         (*T)[1] += totalLinearTranslation[1];
         (*T)[2] += totalLinearTranslation[2];
     }
-
-
-
-
-
-    /*slopeX = slope(positiveStamps,errorsX);
-    slopeY = slope(positiveStamps,errorsY);
-    slopeZ = slope(positiveStamps,errorsZ);
-    ROS_INFO("SlopeX %f SlopeY %f Slopez %f", slopeX, slopeY, slopeZ);
-
-    transforms->at(0)[0] = (fabs(Y->at(0).blockPtr->mean_.x - P->at(0).x) < errorThreshold_) ? 0 : Y->at(0).blockPtr->mean_.x - P->at(0).x;
-    transforms->at(0)[1] = (fabs(Y->at(0).blockPtr->mean_.y - P->at(0).y) < errorThreshold_) ? 0 : Y->at(0).blockPtr->mean_.y - P->at(0).y;
-    transforms->at(0)[2] = (fabs(Y->at(0).blockPtr->mean_.z - P->at(0).z) < errorThreshold_) ? 0 : Y->at(0).blockPtr->mean_.z - P->at(0).z;
-    for (int i=1;i<ySize;i++){
-        if (timeStamps.at(i) < 0){
-
-            tX = (fabs(Y->at(i).blockPtr->mean_.x - P->at(i).x) < errorThreshold_) ? 0 : Y->at(i).blockPtr->mean_.x - P->at(i).x;
-            tY = (fabs(Y->at(i).blockPtr->mean_.y - P->at(i).y) < errorThreshold_) ? 0 : Y->at(i).blockPtr->mean_.y - P->at(i).y;
-            tZ = (fabs(Y->at(i).blockPtr->mean_.z - P->at(i).z) < errorThreshold_) ? 0 : Y->at(i).blockPtr->mean_.z - P->at(i).z;
-        }
-        else{
-            tX = slopeX * positiveStamps.at(i);
-            tY = slopeY * positiveStamps.at(i);
-            tZ = slopeZ * positiveStamps.at(i);
-        }
-
-        transforms->at(i)[0] = (fabs(tX) < errorThreshold_) ? 0 : tX;
-        transforms->at(i)[1] = (fabs(tY) < errorThreshold_) ? 0 : tY;
-        transforms->at(i)[2] = (fabs(tZ) < errorThreshold_) ? 0 : tZ;
-        (*T) += transforms->at(i);
-
-    }*/
-
-    // 1st Independent, 2nd Independent
-
-    //ROS_INFO("Time: %f", positiveStamps.back());
-
-    //(*T)[0] = slopeX * positiveStamps.back();
-    //(*T)[1] = slopeY * positiveStamps.back();
-    //(*T)[2] = slopeZ * positiveStamps.back();
-
-    //(*T)[0] = centroidY.x - centroidP.x;
-    //(*T)[1] = centroidY.y - centroidP.y;
-    //(*T)[2] = centroidY.z - centroidP.z;
-
-    //(*T)[0] /= ySize;
-    //(*T)[1] /= ySize;
-    //(*T)[2] /= ySize;
-
-
 
     ROS_INFO("Translation x = %f y = %f z = %f",(*T)[0], (*T)[1], (*T)[2]);
 

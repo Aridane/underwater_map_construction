@@ -31,7 +31,7 @@ void Wall2DDetector::onInit(){
     nh_.param("wallPublishTopic", wallPublishTopic_, string("/Sonar/Walls"));
     nh_.param("wallCoefficientsPublishTopic", wallCoefficientsPublishTopic_, string("/Sonar/Walls/Coeff"));
 
-    nh_.param("mode", mode_, string("RANSAC")); // RANSAC | HOUGH
+    nh_.param("mode", mode_, string("RANSAC")); // RANSAC
     nh_.param("nWalls", nWalls_, int(3));
     nh_.param("RANSACDistance", RANSACDistance_, double(0.6));
     nh_.param("RANSACProbability", RANSACProbability_, double(0.8));
@@ -168,7 +168,7 @@ void Wall2DDetector::cloudCallback(avora_msgs::StampedIntensityCloudConstPtr clo
         cloudMsg2.header = cloudMessagePtr->header;
 		wallPublisher_.publish(cloudMsg2);
 	}
-    else if (mode_.find("HOUGH") != -1) {
+    /*else if (mode_.find("HOUGH") != -1) {
         NODELET_INFO("Hough powers activate!");
         cv_bridge::CvImage cvImg;
         if (cloud->isOrganized()) {
@@ -252,7 +252,7 @@ void Wall2DDetector::cloudCallback(avora_msgs::StampedIntensityCloudConstPtr clo
                 }
             }
         }
-    }
+    }*/
 }
 
 void Wall2DDetector::detectWall(intensityCloud::ConstPtr cloud) {
