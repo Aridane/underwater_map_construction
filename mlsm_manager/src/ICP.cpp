@@ -449,12 +449,6 @@ double ICP::registration(intensityCloud::Ptr P, std::vector<BlockInfo>* Y, std::
         std::vector<double> errorsX, errorsY, errorsZ;
         double slopeX, slopeY, slopeZ;
         std::vector<double> positiveStamps;
-        for (i=0;i<ySize;i++){
-            //errorsX.push_back(transforms->at(i)[0]);
-            //errorsY.push_back(transforms->at(i)[1]);
-            //errorsZ.push_back(transforms->at(i)[2]);
-            positiveStamps.push_back(fabs(fabs(timeStamps.at(i))-fabs(timeStamps.front())));
-        }
         i = 0;
         bool moving = false;
         double tX = 0,tY = 0,tZ = 0;
