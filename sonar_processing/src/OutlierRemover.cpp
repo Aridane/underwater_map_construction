@@ -21,7 +21,7 @@ void OutlierRemover::onInit()
     nh_.param("minRadius", minRadius_, double(1));
     nh_.param("stddevMulThresh", stddevMulThresh_, double(0));
     nh_.param("meanK", meanK_, int(30));
-    nh_.param("keepOrganized", keepOrganized_, bool(true));
+    nh_.param("keepOrganized", keepOrganized_, bool(false));
 
     // Subscribe to incoming sonar data from driver
     cloudSubscriber_ = nh_.subscribe(cloudSubscribeTopic_.c_str(), 0, &OutlierRemover::cloudCallback, this);
