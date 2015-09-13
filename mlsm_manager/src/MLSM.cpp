@@ -66,7 +66,7 @@ Block* MLSM::findClosestBlock(pcl::PointXYZI point){
 
     //ROS_INFO("Point Cell %g %g",pos[0],pos[1]);
     if ((fabs(pos[0]) > spanX_) || (fabs(pos[1]) > spanY_)){
-        ROS_ERROR("Point out of range %f %f %f", point.x,point.y,point.z);
+        ROS_ERROR("Point out of range X %f Y %f Z %f", point.x,point.y,point.z);
         return NULL;
     }
     // Find correct cell

@@ -2,7 +2,7 @@
 <launch>
 	<arg name="paused" default="false"/>
 	<arg name="use_sim_time" default="true"/>
-	<arg name="gui" default="false"/>
+	<arg name="gui" default="true"/>
 	<arg name="headless" default="false"/>
 	<arg name="debug" default="false"/>
 
@@ -10,7 +10,7 @@
 	<param name="robot_description" command="$(find xacro)/xacro.py $(arg model)" />
 
 	<include file="$(find gazebo_ros)/launch/empty_world.launch">
-		<arg name="world_name" value="$(find charle_gazebo)/worlds/walls.world"/>
+		<arg name="world_name" value="$(find charle_gazebo)/worlds/taliarte.world"/>
 		<!--<arg name="world_name" value="$(find charle_gazebo)/worlds/taliarte.world"/>-->
 
 		<!--<arg name="world_name" value="$(find charle_gazebo)/worlds/walls.world"/>-->
